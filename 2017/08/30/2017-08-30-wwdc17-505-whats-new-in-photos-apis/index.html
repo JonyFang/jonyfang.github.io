@@ -1391,24 +1391,28 @@ href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramewor
             
 
             
-    <div id="gitment-container"></div>
-    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
-    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
-    <script>
-        var gitment = new Gitment({
-            id: '1504022400000', // 可选。默认为 location.href
-            owner: 'JonyFang',
-            repo: 'jonyfang.github.io',
-            oauth: {
-                client_id: '2d128cb2a1c7f728df46',
-                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
-            },
-        })
-        gitment.render('gitment-container')
-    </script>
-
 
             
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script>
+    <script>
+        let idOption = '1504022400000'
+        
+        const gitalk = new Gitalk({
+            clientID: '2d128cb2a1c7f728df46',
+            clientSecret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            repo: 'jonyfang.github.io',
+            owner: 'JonyFang',
+            admin: "JonyFang",
+            id: idOption,
+            distractionFreeMode: false,
+            createIssueManually: true,
+        })
+        gitalk.render('gitalk-container')
+    </script>
+    <noscript>为正常使用 Gitalk 评论功能，您需要激活 JavaScript</noscript>
+
 
             <!-- utteranc评论 -->
 
@@ -1864,6 +1868,12 @@ href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramewor
         
         
         
+        
+        
+        
+        
+        
+        
     
     
     
@@ -2127,14 +2137,14 @@ href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramewor
                 优化相关
             </span>
         
-            <span class="sidebar-tag-name" data-tags="App Clips">
-                <span class="iconfont-archer">&#xe606;</span>
-                App Clips
-            </span>
-        
             <span class="sidebar-tag-name" data-tags="基础">
                 <span class="iconfont-archer">&#xe606;</span>
                 基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
             </span>
         
     </div>
@@ -2153,14 +2163,14 @@ href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramewor
             iOS
         </span>
     
-        <span class="sidebar-category-name" data-categories="Objective-C">
-            <span class="iconfont-archer">&#xe60a;</span>
-            Objective-C
-        </span>
-    
         <span class="sidebar-category-name" data-categories="多线程">
             <span class="iconfont-archer">&#xe60a;</span>
             多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
         </span>
     
         <span class="sidebar-category-name" data-categories="源码阅读">
@@ -2188,14 +2198,14 @@ href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramewor
             编译原理
         </span>
     
-        <span class="sidebar-category-name" data-categories="技术">
-            <span class="iconfont-archer">&#xe60a;</span>
-            技术
-        </span>
-    
         <span class="sidebar-category-name" data-categories="优化相关">
             <span class="iconfont-archer">&#xe60a;</span>
             优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
         </span>
     
     </div>
