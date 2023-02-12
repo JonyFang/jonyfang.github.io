@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="视频链接：WWDC 2017 Session 505 - What&#39;s New in Photos APIs 本节要介绍的是 Photos APIs 的一些新特性。简单的概括有下面这几点内容：  UIImagePickerController 的大幅优化 授权模式的改进 动图的支持 iCloud 照片图库的优化 照片项目的扩展  后续内容，会对这几个点依次展开。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="WWDC17 505 - Photos APIs 新特性">
+<meta property="og:url" content="http://example.com/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="视频链接：WWDC 2017 Session 505 - What&#39;s New in Photos APIs 本节要介绍的是 Photos APIs 的一些新特性。简单的概括有下面这几点内容：  UIImagePickerController 的大幅优化 授权模式的改进 动图的支持 iCloud 照片图库的优化 照片项目的扩展  后续内容，会对这几个点依次展开。">
+<meta property="og:locale">
+<meta property="og:image" content="http://example.com/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/resource/session505/505_add_to_photos.jpg">
+<meta property="og:image" content="http://example.com/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/resource/session505/505_add_to_photos.jpg">
+<meta property="article:published_time" content="2017-08-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2017-08-29T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="WWDC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/resource/session505/505_add_to_photos.jpg">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>WWDC17 505 - Photos APIs 新特性 · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">WWDC17 505 - Photos APIs 新特性</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                WWDC17 505 - Photos APIs 新特性
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS/WWDC"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS/WWDC
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="WWDC">WWDC</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">12.8k</span>阅读时长: <span class="post-count reading-time">47 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2017/08/30</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <p>视频链接：<a href="https://developer.apple.com/wwdc17/505">WWDC 2017
+Session 505 - What's New in Photos APIs</a></p>
+<p>本节要介绍的是 Photos APIs
+的一些新特性。简单的概括有下面这几点内容：</p>
+<ul>
+<li>UIImagePickerController 的大幅优化</li>
+<li>授权模式的改进</li>
+<li>动图的支持</li>
+<li>iCloud 照片图库的优化</li>
+<li>照片项目的扩展</li>
+</ul>
+<p>后续内容，会对这几个点依次展开。</p>
+<span id="more"></span>
+<h2 id="uiimagepickercontroller-的大幅优化">UIImagePickerController
+的大幅优化</h2>
+<p><code>UIImagePickerController</code>是系统提供的和相册及相机交互的一个类，通过这个类，你可以在应用中选择照片和视频。在
+iOS 11 里，图片选择器有了许多的改进和新功能的引入。</p>
+<h3 id="隐私授权的改进">隐私授权的改进</h3>
+<p>一直以来，Apple
+十分关注用户的隐私安全。所以，之前在任何情况下，如果获取 Photos
+资源，都需要获取用户的授权才可以进行。正如下面弹窗这样，请求用户的授权。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/758ef482bd5a71d4ec7170c15a1bcc60.jpg" /></p>
+<p>正因为授权过程的存在，使得应用程序与用户之间产生了矛盾。对于用户而言，需要他们打开一级隐私，这不是用户想要的；而对于应用程序来说，应用在未获取权限的情况下，无法执行相应的程序和操作，即便它自身有很多优秀的功能，都会因为未授权而无法使用。</p>
+<p>在 iOS 11 中，如果通过<code>UIImagePickerController</code>
+访问相册资源，这个<code>警告弹窗</code>不会再出现，会直接进行程序运行。看到这里，你或许会问：那用户的隐私保护怎么办？</p>
+<p>首先需要介绍一下<code>UIImagePickerController</code> 新的授权模式。自
+iOS 11 开始，<code>UIImagePickerController</code>成为了一个自动授权
+API。也就是说，当应用程序要显示 API
+的内容，将会是从一个<code>自动处理的沙盒</code>和<code>安全环境</code>中获取，应用不再访问用户的<code>Photo Library</code>。</p>
+<p>并且，只有用户本人可以和<code>UIImagePickerController UI</code>进行互动。当用户做出一个选择，系统会取出选中的照片或视频，发送到应用中。这样就消除了前面提出的在应用中因为授权而产生的矛盾，同时这也让用户有了更高级别的隐私。因为不存在授权，也就不会再有请求授权。使用起来更为方便了。</p>
+<h3 id="元数据的获取更为方便">元数据的获取更为方便</h3>
+<p>Photos
+拥有丰富的<code>元数据(metadata)</code>，内容包括创建日期、照片的格式，及一些其他不同类型的元数据。在
+iOS 11 中，获取这些信息变得容易了很多。系统提供了一个全新的键值
+<code>UIImagePickerControllerImageURL</code>，会包含所有<code>UIImagePickerController</code>的结果。我们可以使用这里的
+URL，将对应数据读入应用并按照需要进行处理。该 URL
+是<code>文件 URL</code>，指向一个应用中的<code>临时文件</code>，如果之后想对文件继续操作，建议把文件移动到更永久的文件路径中。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">imagePickerController</span>(<span class="keyword">_</span> <span class="params">picker</span>: <span class="type">UIImagePickerController</span>, <span class="params">didFinishPickingMediaWithInfo</span> <span class="params">info</span>: [<span class="params">String</span> : <span class="keyword">Any</span>]) &#123;  </span><br><span class="line">  <span class="keyword">if</span> <span class="keyword">let</span> imageURL <span class="operator">=</span> info[<span class="type">UIImagePickerControllerImageURL</span>] <span class="keyword">as?</span> <span class="type">URL</span> &#123; </span><br><span class="line">        <span class="built_in">print</span>(imageURL)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="heif-图片格式的引入">HEIF 图片格式的引入</h3>
+<p>iOS 11 中，Photos
+引入了一种新的图片格式<code>HEIF</code>。同时，Apple
+意识到生态系统完全接受<code>HEIF</code>需要一段时间，考虑到新类型图片格式的兼容性。Apple
+为<code>UIIMagePickerController</code>提供了一个新属性<code>imageExportPresent</code>，让兼容过程变得更为容易。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> imageExportPreset: <span class="type">UIImagePickerControllerImportExportPreset</span> &#123; <span class="keyword">get</span> <span class="keyword">set</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.imageExportPreset <span class="operator">=</span> .compatible </span><br><span class="line"><span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.imageExportPreset <span class="operator">=</span> .current </span><br><span class="line"><span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure>
+<p><code>imageExportPresent</code>拥有两种类型：</p>
+<ul>
+<li>.compatible (兼容模式)</li>
+<li>.current (当前模式)</li>
+</ul>
+<p>在<code>compatible (兼容模式)</code>下，如果用户选中的源图片是<code>HEIF 格式</code>，系统会通过转换，提供一个
+JPEG 格式的图片。当然，JPEG
+是该属性的默认值，如果不需要有什么改变，就不用再做更多的事情。</p>
+<p>如果，需要获取的照片格式与拍摄时的格式相同，只需把属性值设为<code>current (当前模式)</code>，这样就会得到与
+Photo Library 里相同格式的图片，包括<code>HEIF 格式</code>。</p>
+<h3 id="视频文件的获取更为方便">视频文件的获取更为方便</h3>
+<p>iOS 11
+中，对视频选择的功能，也有了很好的改进。暂时把这部分内容放在一边，先来简单了解下<code>AVFoundation</code>。<code>AVFoundation</code>是
+Apple
+提供的框架，用于<code>丰富编辑</code>及<code>照片播放</code>。通过<code>AVFoundation</code>导出的素材可以拥有丰富的格式。</p>
+<p>值得称赞的是，<code>UIImagePickerController</code>现在也有了类似的功能，引入了一个新属性<code>videoExportPreset</code>。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> videoExportPreset: <span class="type">String</span> &#123; <span class="keyword">get</span> <span class="keyword">set</span> &#125;</span><br></pre></td></tr></table></figure>
+<p>你可以通过这个方法来告诉系统，你所选中的视频需要以哪种格式返回。这样，你就可以轻松得到预设格式的资源内容了。</p>
+<p>我们来看一个例子：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> AVFoundation</span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.videoExportPreset <span class="operator">=</span> <span class="type">AVAssetExportPresetHighestQuality</span> <span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure>
+<p>如上代码中，首先，导入<code>AVFoundation</code>；接着，创建一个<code>UIIMagePickerController</code>实例，并描述我们想要资源文件以哪种格式返回（这里我们请求的是最高品质）；之后显示选择器。</p>
+<p>当用户做出选择时，无论是什么格式，系统都对其进行交叉编译，得到匹配格式，之后返回给用户。关于可用预设的完整清单，可以通过接口<code>AVAssetExportSession</code>查看。</p>
+<h3
+id="照片和视频的保存有了新的隐私模式">照片和视频的保存有了新的隐私模式</h3>
+<p>前面，通过一些巧妙的设计，在保护用户隐私的情况下，已经实现了无缝选取。实际上，iOS
+11 也对图片和视频的保存做了很多的优化。</p>
+<p>在 iOS 11
+中，保存一张照片或一段视频到用户的图片库中，系统提供了一个全新的安全模型及权限级别。<code>UIImagePickerController</code>对于保存<code>图片资源</code>及<code>视频资源</code>分别提供了权限级别。一个是<code>UIImageWriteToSavedPhotosAlbum</code>，另一个是<code>UISaveVideoAtPathToSavedPhotosAlbum</code>。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">UIImageWriteToSavedPhotosAlbum</span>(<span class="keyword">_</span> <span class="params">image</span>: <span class="type">UIImage</span>, <span class="keyword">_</span> <span class="params">completionTarget</span>: <span class="keyword">Any</span><span class="operator">?</span>, <span class="keyword">_</span> <span class="params">completionSelector</span>: <span class="type">Selector</span>?, <span class="keyword">_</span> <span class="params">contextInfo</span>: <span class="type">UnsafeMutableRawPointer</span>?)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">UISaveVideoAtPathToSavedPhotosAlbum</span>(<span class="keyword">_</span> <span class="params">videoPath</span>: <span class="type">String</span>, <span class="keyword">_</span> <span class="params">completionTarget</span>: <span class="keyword">Any</span><span class="operator">?</span>, <span class="keyword">_</span> <span class="params">completionSelector</span>: <span class="type">Selector</span>?, <span class="keyword">_</span> <span class="params">contextInfo</span>: <span class="type">UnsafeMutableRawPointer</span>?)</span><br></pre></td></tr></table></figure>
+<figure>
+<img src="./resource/session505/505_add_to_photos.jpg"
+alt="Add To Your Photos" />
+<figcaption aria-hidden="true">Add To Your Photos</figcaption>
+</figure>
+<p>这两种方式都只会请求<code>添加授权</code>，对于用户来说<code>添加授权</code>是很小的要求。因为这个权限只允许添加内容到用户的
+Photo
+Library，而不涉及到读取权限。所以，很大程度上，用户会愿意给出这个权限。</p>
+<h3 id="phasset-获取的改进">PHAsset 获取的改进</h3>
+<p>我们来看一个例子：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">imagePickerController</span>(<span class="keyword">_</span> <span class="params">picker</span>: <span class="type">UIImagePickerController</span>, <span class="params">didFinishPickingMediaWithInfo</span> <span class="params">info</span>: [<span class="params">String</span> : <span class="keyword">Any</span>]) &#123;</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">let</span> asset <span class="operator">=</span> info[<span class="type">UIImagePickerControllerPHAsset</span>] <span class="keyword">as?</span> <span class="type">PHAsset</span> &#123;</span><br><span class="line">        <span class="built_in">print</span>(asset)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码中，我们实现了一个代理方法。在获得结果词典时，有了一个全新的键，键名为<code>UIIMagePickerControllerPHAsset</code>。取得该键的值，将会得到对应的资产对象，可以对其进行自由使用。</p>
+<p>通过这些改变，增强了用户的隐私保护，也让<code>UIIMagePickerController</code>成为更强大而功能齐全的
+API，满足了市面上大部分应用的需求。然而，有时会出现需要和照片框架进行更深入集成的需求，在这些场景下，Apple
+推荐使用<code>PhotoKit</code>。</p>
+<table style="width:7%;">
+<colgroup>
+<col style="width: 6%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>## PhotoKit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>## PhotoKit</td>
+</tr>
+<tr class="even">
+<td>和照片相关的应用，一直以来是 App Store
+里最受欢迎的一类。这一次，<code>PhotoKit</code>做了一些改进，可以让你写出拥有更棒用户体验的新功能。</td>
+</tr>
+<tr class="odd">
+<td>### Live Photo 介绍</td>
+</tr>
+<tr class="even">
+<td>首先一起了解下<code>Live Photo</code>的效果。Live Photo
+效果包含：</td>
+</tr>
+<tr class="odd">
+<td>- <strong>循环效果</strong> - <strong>弹跳效果</strong> -
+<strong>长曝光效果等</strong></td>
+</tr>
+<tr class="even">
+<td>其中<code>循环效果</code>，是通过仔细分析视频帧，并无缝地和这些视频帧无止境循环缝合在一起；<code>弹跳效果</code>，它的工作原理和<code>循环效果</code>也是相似的；最后是<code>长曝光效果</code>，它将分析
+Live Photo 的视频帧，创造令人惊艳的静物。</td>
+</tr>
+<tr class="odd">
+<td>现存的<code>PhotoKit</code>媒体类型有这些：</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">enum</span> <span class="title class_">PHAssetMediaType</span> : <span class="title class_">Int</span> &#123;</span><br><span class="line">       <span class="keyword">case</span> unknown</span><br><span class="line">       <span class="keyword">case</span> image</span><br><span class="line">       <span class="keyword">case</span> video</span><br><span class="line">       <span class="keyword">case</span> audio</span><br><span class="line">   &#125;</span><br><span class="line">   </span><br><span class="line">   <span class="keyword">struct</span> <span class="title class_">PHAssetMediaSubtype</span> : <span class="title class_">OptionSet</span> &#123;</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoPanorama</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoHDR</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoScreenshot</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoLive</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoDepthEffect</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoStreamed</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoHighFrameRate</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoTimelapse</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>如果用户拍摄了一段视频，会想在应用中进行观看，并将拍摄的内容以<code>视频方式</code>使用。如果用户拍摄了一张<code>Live Photo</code>，同样会想要在应用中看到内容以<code>Live Photo</code>的方式呈现。为此，iOS
+11 提供了三种媒体类型来实现对应目标：</td>
+</tr>
+<tr class="even">
+<td>- <strong>image</strong> - <strong>video</strong> -
+<strong>photoLive</strong></td>
+</tr>
+<tr class="odd">
+<td><code>Live Photo</code>效果比较复杂。为此，iOS 11
+中引入了全新的<code>PHAsset</code>属性<code>playbackStyle</code>，让你可以简单实现<code>Live Photo</code>的播放。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">PHAsset</span> : <span class="title class_">PHObject</span> &#123;</span><br><span class="line">    <span class="keyword">var</span> playbackStyle: <span class="type">PHAssetPlaybackStyle</span> &#123; <span class="keyword">get</span> &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">enum</span> <span class="title class_">PHAssetPlaybackStyle</span> : <span class="title class_">Int</span> &#123;</span><br><span class="line">    <span class="keyword">case</span> unsupported</span><br><span class="line">    <span class="keyword">case</span> image</span><br><span class="line">    <span class="keyword">case</span> imageAnimated</span><br><span class="line">    <span class="keyword">case</span> livePhoto</span><br><span class="line">    <span class="keyword">case</span> video</span><br><span class="line">    <span class="keyword">case</span> videoLooping</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td><code>playbackStyle</code>属性，是<code>唯一</code>可以用来查看和决定要使用什么样的图片管理器
+API、用什么样的视图来表现、以及为该视图设置什么样的 UI 限制。同时，Apple
+更新了<a
+href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramework/Introduction/Intro.html#//apple_ref/doc/uid/TP40014575">PhotoKit
+示例应用</a>，包含所有这些新的播放风格。这里介绍下其中的三种，它们和前面提到的<code>Live Photo 效果</code>相关。从<code>imageAnimated</code>开始。</td>
+</tr>
+<tr class="even">
+<td>#### Animated Image</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">imageManager.requestImageData(for: asset, options: options) &#123;</span><br><span class="line">    (data, dataUTI,  orientation, info) <span class="keyword">in</span>    <span class="comment">// 使用示例项目中的 animatedImageView</span></span><br><span class="line">    <span class="keyword">let</span> animatedImage <span class="operator">=</span> <span class="type">AnimatedImage</span>(data: data)</span><br><span class="line">    animatedImageView.animatedImage <span class="operator">=</span> animatedImage</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>iOS 11
+有了一个期待已久的新功能。现在，在内置应用“照片”中支持了<code>动画 GIF</code>的播放。如果要在你的应用中播放
+GIF，只需要从图像管理器请求图像数据，然后使用图像 IO 和 Core Graphics
+进行播放。接下来是<code>Live Photo</code>。</td>
+</tr>
+<tr class="odd">
+<td>#### Live Photo</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">imageManager.requestLivePhoto(for: asset, targetSize: pixelSize, contentMode: .aspectFill, options: options) &#123;</span><br><span class="line">    (livePhoto, info) <span class="keyword">in</span>    <span class="comment">// 使用示例项目中的 PHLivePhotoView</span></span><br><span class="line">    livePhotoView.livePhoto <span class="operator">=</span> livePhoto</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td><code>Live Photos</code>一直很受用户的关注，如何在应用中更好地呈现它们，非常重要，也非常简单。在如上的这个例子里，首先从图像管理器<code>请求</code>一张<code>Live Photo</code>，之后设置<code>PHLivePhotoView</code>。在你的应用里，用户可以通过轻触播放一张<code>Live Photo</code>，正如用户在内置<code>“照片”应用</code>里的操作一样。</td>
+</tr>
+<tr class="even">
+<td>#### Looping Video</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">swiftimageManager.requestPlayerItem(forVideo: asset, options: options) &#123; </span><br><span class="line">    playerItem, info in</span><br><span class="line">    DispatchQueue.main.async &#123;</span><br><span class="line">        let player = AVQueuePlayer()</span><br><span class="line">        playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)</span><br><span class="line">        playerLayer.player = player</span><br><span class="line">        player.play()</span><br><span class="line">    &#125;&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>在今年所推出的视频循环中，既包括<code>弹跳效果</code>，也包括<code>Live Photo</code>的循环效果。现在，在你的应用里播放这些和播放普通视频非常相似。可以请求播放器项目，并使用<code>AVFoundation</code>播放，还可以使用<code>AVPlayerLooper</code>取得循环效果。
+可见，表现用户的媒体变得更为轻便，以他们真正想表现的方式，你也可以在自己的应用中，对这些全新的媒体类型，更为创新地表现。</td>
+</tr>
+<tr class="odd">
+<td>## iCloud 照片图库的改进 <img
+src="https://images.xiaozhuanlan.com/photo/2017/fe83154503f1c3e58ce11fbf317bc544.jpg" /></td>
+</tr>
+<tr class="even">
+<td>“iCloud 照片图库”可以与“照片”应用完美搭配使用。当用户开启“iCloud
+照片图库”时，用户的照片和视频会被安全上传到 iCloud
+中，同时这些更改会同步到用户的其他设备中。自动上传 iCloud
+操作的触发条件是，设备连接到 Wi-Fi
+且电量充足。根据用户的网络情况，在所有设备和 iCloud.com
+上看到同步照片和视频所需的时间可能会不同。</td>
+</tr>
+<tr class="odd">
+<td>使用 iPhone
+拍照的用户，也常会使用“照片”相关的第三方应用。这些用户，大致可以分为 3
+类：轻度用户、中度爱好者和重度专业用户。对于重度用户而言，由于自身图库中有很多内容，在第一次使用应用时，需要加载大批量的照片，这个过程中会十分耗时。而且这种耗时的加载状态，会对应用的用户体验大打折扣。</td>
+</tr>
+<tr class="even">
+<td>在 iOS 11
+中，针对如何更快速高效地操作“大型照片图库”这一点做了优化，后面的内容会依次展开描述。</td>
+</tr>
+<tr class="odd">
+<td>### 创建一个用于测试的“大型照片图库”</td>
+</tr>
+<tr class="even">
+<td>前面提到，如果图库中有大量内容，在应用加载数据时，会处于长时间的加载状态。而你如果想创建一个拥有大批量图片的图库，还是有些难度的。友好的是，Apple
+为开发者提供了一个用户创建图库的示例应用：<a
+href="https://developer.apple.com/sample-code/wwdc/2017/Creating-Large-Photo-Libraries-for-Testing.zip">Photo
+Library
+Filler</a>。下载该应用并安装到测试设备，点击<code>“Add Photos” 按钮</code>，它便会迅速生成一个拥有大批量图片的图库供测试使用。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/bbaf0214e3d8cad2d6e968c56487f529.jpg" /></td>
+</tr>
+<tr class="odd">
+<td>到这里，你就拥有了一个可用于测试的<code>“大型照片图库”</code>。</td>
+</tr>
+<tr class="even">
+<td>### 现在，如何从“照片图库”提取图片</td>
+</tr>
+<tr class="odd">
+<td>看下面这段代码：</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(with: options)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>这个方法用于从用户的<code>“照片图库”</code>提取图片，等号右侧用于<code>提取资产</code>，左侧为<code>提取结果</code>。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> options <span class="operator">=</span> <span class="type">PHFetchOptions</span>()options.predicate <span class="operator">=</span> <span class="type">NSPredicate</span>(format: <span class="operator">&amp;</span>quot;isFavorite <span class="operator">=</span> <span class="operator">%</span>d<span class="operator">&amp;</span>quot;, <span class="literal">true</span>)</span><br><span class="line">options.sortDescriptors <span class="operator">=</span> [<span class="type">NSSortDescriptor</span>(key: <span class="operator">&amp;</span>quot;creationDate<span class="operator">&amp;</span>quot;, ascending: <span class="literal">true</span>)]</span><br><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(with: options)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>在上述代码中，首先提取库里<code>所有的 Asset</code>，并进行筛选，筛选条件为<code>isFavorite = true</code>，之后按照对应的创建日期进行排序。这时，如果在这些自定义提取里<code>发现耗时</code>，那么简化这里的筛选条件会十分必要。不同的筛选方式，可能会意味着查询耗时的巨大差异。造成这种差异的原因是你的操作可能在数据库优化路径之外进行，同时又试图回到优化路径中，这样就产生了不同的耗时差距。</td>
+</tr>
+<tr class="even">
+<td>比这种自定义提取更好的是，尽可能避免这种操作。例如下面这个例子中，我们实际上提取的是用户<code>最喜欢</code>的<code>智能相册</code>。然后在智能相册里<code>提取 Asset</code>。这样既可以使用已有的<code>关键字</code>和<code>排序描述符</code>，还可以保证操作是在数据库优化路径中进行的。</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> smartAlbums <span class="operator">=</span> <span class="type">PHAssetCollection</span>.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumFavorites, options: <span class="literal">nil</span>)</span><br><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(in: smartAlbums.firstObject, options: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>接着，看下返回结果。返回对象是一个<code>PHFetchResult</code>类型的对象。<code>PHFetchResult 类型</code>非常像一个数列，并且可以像数组一样来使用。但从内部实现来看，<code>PHFetchResult</code>和数列的工作机制还是完全不同的。并且这也是<code>PhotoKit</code>在大型图库操作方面，能够如此快速高效的原因之一。</td>
+</tr>
+<tr class="odd">
+<td>我们来看看它的内部工作机制。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/b7383b7c7eddae3304c48d283c7d75ee.jpg" /></td>
+</tr>
+<tr class="even">
+<td>最开始，它只包含一个<code>标识符列表</code>。这意味着可以迅速返回对应的
+Asset。但开始使用后，有更多工作必须执行。我们以一个枚举作为例子。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/94a0ff75cb87c884023be87268c89b97.jpg" /></td>
+</tr>
+<tr class="odd">
+<td>在这里，我们从<code>索引 0 开始</code>枚举。目前只有一个标识符，你还需要从数据库里提取元数据。为此创建一个<code>PHAsset 对象</code>，以便将
+Asset 的元数据返回给你。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/16d78b56086431e4f054daede150d4d2.jpg" /></td>
+</tr>
+<tr class="even">
+<td>实际上，同时也创建了<code>一个批处理</code>。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/5662e0c527a4b13085762d09fa1cc817.jpg" /></td>
+</tr>
+<tr class="odd">
+<td>当我们继续枚举时，<code>索引 1 和 2</code>实际已经在内存中了。枚举继续，它将访问硬盘，获取后续
+Asset 的元数据。</td>
+</tr>
+<tr class="even">
+<td>在提取结果量级较小的情况下，这样的提取，并不会有太大的影响。但如果提取结果包含<code>10万个 Asset</code>。其中，每一批都需要<code>占用几 kb 内存</code>。如果是<code>10w 批</code>，那将会产生<code>几百兆</code>的内存用量。更糟糕的是，每一批都需要<code>几毫秒</code>的提取时间，如果有<code>10w 批</code>，就需要<code>消耗 10s</code>来枚举这样的一个大型提取结果。所以，应该尽量<code>避免枚举操作</code>。</td>
+</tr>
+<tr class="odd">
+<td>### 在 PHFetchResult 中查询 Asset 更优的方式</td>
+</tr>
+<tr class="even">
+<td>实际开发过程中，枚举操作总是可能会出现的。这里列举一个例子。现在，你需要从一个提取结果中查询一个<code>Asset 的索引</code>。</td>
+</tr>
+<tr class="odd">
+<td>第一种方式，可以通过枚举该提取结果，通过<code>“等于”</code>比较返回的对象，来获取对应<code>Asset 的索引</code>。但是，枚举会非常耗时，所以更好的方法是通过另一种方式，使用<code>高端 API</code>。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/2a142436035188537528e1eaef142487.jpg" /></td>
+</tr>
+<tr class="even">
+<td>如上，通过使用<code>indexOfObject</code>来进行 Asset
+索引的查询。而<code>indexOfObject</code>方法内部是通过比较“对象标识符”，以找到符合条件的
+Asset，这样就不会有附加的“硬盘访问”和“数据库提取”。进而避免了第一种方式中，因为枚举出现的耗时操作。同样的，对<code>containtsObject</code>也是如此。</td>
+</tr>
+<tr class="odd">
+<td>## 照片项目的拓展</td>
+</tr>
+<tr class="even">
+<td>一直以来，Apple 允许用户围绕照片创建丰富的有创意的项目。</td>
+</tr>
+<tr class="odd">
+<td>### PHProjectExtensionController 的引入</td>
+</tr>
+<tr class="even">
+<td>现在，<code>“照片”</code>中添加了一个<code>新的扩展</code>。对应的，<code>Xcode</code>中也添加了一个<code>新模板</code>，开发者在自己的应用里可以<code>轻松创建</code>这些扩展。此外，<code>“照片”应用</code>会自动发现你的拓展，大大提高了扩展应用被用户知道的概率。不仅如此，Apple
+为了让这些扩展更容易为用户所发现，给这些扩展应用提供了<code>App Store</code>的直接链接。该链接会打开<code>App Store</code>窗口，并自动显示支持该扩展的应用。</td>
+</tr>
+<tr class="odd">
+<td><img
+src="https://images.xiaozhuanlan.com/photo/2017/756e797b9eced7d408432f876e21c673.jpg" />
+扩展只存在于开发者的应用内。对于开发者来说，如果你在 App Store
+已经有了一个关于 Photos
+相关的应用。此时，就可以将扩展代码移动到该扩展空间内，并加以利用。之后，添加一个视图控制器，并实现<code>PHProjectExtensionController</code>协议。一切就位，“照片应用”便可以发现你的扩展了。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/e3a53f0348049d39207bc4656a78e8fa.jpg" /></td>
+</tr>
+<tr class="even">
+<td>在用户选择“扩展应用”，并用它创建一个项目时，<code>&amp;quot;照片应用&amp;quot;</code>会发送一些字节数据（<code>PHProjectExtensionContext</code>、<code>PHProjectInfo</code>）到对应的<code>“扩展应用”</code>。之后<code>“照片应用”</code>得到相应的返回结果，知道可以安装你的视图控制器。</td>
+</tr>
+<tr class="odd">
+<td>过程中遵循的协议本身，对支持的<code>项目类型</code>有一个可选属性，可用于快速描述想让用户选择的选项。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">optional</span> <span class="keyword">public</span> <span class="keyword">var</span> supportedProjectTypes: [<span class="type">PHProjectTypeDescription</span>] &#123; <span class="keyword">get</span> &#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>在实际使用过程中，用户既可以选择退出，也可以选择直接进入扩展。这些，在视图控制器里也有特定的函数方法。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">protocol</span> <span class="title class_">PHProjectExtensionController</span> : <span class="title class_">NSObjectProtocol</span> &#123;</span><br><span class="line">    <span class="comment">//第一次使用该扩展创建项目时调用  </span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">beginProject</span>(<span class="params">with</span> <span class="params">extensionContext</span>: <span class="type">PHProjectExtensionContext</span>, </span><br><span class="line">        <span class="params">projectInfo</span>: <span class="type">PHProjectInfo</span>, <span class="params">completion</span>: <span class="keyword">@escaping</span> (<span class="type">Error</span>?) -&gt; <span class="type">Void</span>)</span><br><span class="line">        </span><br><span class="line">    <span class="comment">//每次用户回到以前创建的项目时调用</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">resumeProject</span>(<span class="params">with</span> <span class="params">extensionContext</span>: <span class="type">PHProjectExtensionContext</span>, </span><br><span class="line">        <span class="params">completion</span>: <span class="keyword">@escaping</span> (<span class="type">Error</span>?) -&gt; <span class="type">Void</span>)</span><br><span class="line">        </span><br><span class="line">    <span class="comment">//用户离开项目时调用 </span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">finishProject</span>(<span class="params">completionHandler</span> <span class="params">completion</span>: <span class="keyword">@escaping</span> () -&gt; <span class="type">Void</span>) </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>通过第一个函数方法，我们可以得到上下文及项目详细。在第一次使用该扩展创建项目时，会调用该方法。</td>
+</tr>
+<tr class="even">
+<td>第二个函数方法，我们同样可以获得上下文。在每次用户回到扩展项目时，会调用该方法。</td>
+</tr>
+<tr class="odd">
+<td>最后一个函数方法。如果用户在扩展项目内，当他们决定切换离开，会调用该函数。通过回调，你可以清理任何正在处理的数据，或是关闭任何让处理器忙碌的任务，或是正在执行的动画。</td>
+</tr>
+<tr class="even">
+<td>### PHProjectExtensionContext 是什么</td>
+</tr>
+<tr class="odd">
+<td><img
+src="https://images.xiaozhuanlan.com/photo/2017/3135a448529f42fa40631795582e9620.jpg" />
+在<code>PHProjectExtensionContext</code>这个容器里，包含两个非常重要的对象。一个是<code>PHProject</code>，另一个是<code>PHPhotoLibrary</code>。</td>
+</tr>
+<tr class="even">
+<td>#### PHProject 介绍</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHProject.h </span></span><br><span class="line"><span class="comment">// Photos</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">PHProject</span> : <span class="title class_">PHAssetCollection</span> &#123;    <span class="keyword">var</span> projectExtensionData: <span class="type">Data</span> &#123; <span class="keyword">get</span> &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td><code>PHProject</code>本身只是<code>PHAsset</code>的一个<code>子集</code>。在子集中，创建<code>PHProject</code>，只添加了一个非常重要的属性<code>projectExtensionData</code>。可以用于保存任何你需要的数据，它是你正在使用的<code>资产标识符</code>的列表。也许是一些基本的<code>布局信息</code>或<code>配置信息</code>。同时属性<code>projectExtensionData</code>并不是为了照片缓存、缩略图之类的存在。因为这些功能，你可以快速地创建或把它们缓存到其他位置。为了它小而有用，抛开了这些功能，并且<code>projectExtensionData</code>被限制定为<code>1 兆</code>。因为这里面的信息，是一系列的字符串，所以<code>1 兆</code>大小已经足够了。即使用户不断创建项目，也不会增大用户的库。</td>
+</tr>
+<tr class="odd">
+<td><strong>PHProjectChangeRequest</strong></td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    <span class="keyword">let</span> changeRequest <span class="operator">=</span> <span class="type">PHProjectChangeRequest</span>(project: <span class="keyword">self</span>.project)    </span><br><span class="line">    <span class="keyword">try</span> <span class="keyword">self</span>.library.performChangesAndWait &#123; </span><br><span class="line">        changeRequest.projectExtensionData <span class="operator">=</span> <span class="type">NSKeyedArchiver</span>.archivedData(withRootObject: cloudIdentifiers) </span><br><span class="line">    &#125;&#125; <span class="keyword">catch</span> &#123;   </span><br><span class="line">  <span class="built_in">print</span>(<span class="operator">&amp;</span>quot;<span class="type">Failed</span> to save project data: \(error.localizedDescription)<span class="operator">&amp;</span>quot;) </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>设置数据非常简单。只需按上述实例化，实例化后，可以在<code>Photo Library</code>调用<code>performChangesAndWait</code>函数，在里面将数据设置成任何你想要的样式。</td>
+</tr>
+<tr class="even">
+<td>### PHProjectInfo 介绍</td>
+</tr>
+<tr class="odd">
+<td>最高层的<code>ProductInfo</code>分为下面这几个区： <img
+src="https://images.xiaozhuanlan.com/photo/2017/4780125d766ea2c6d3c52bbf861be9c6.jpg" /></td>
+</tr>
+<tr class="even">
+<td>当看到这个构造时，可能会问，为什么数组里面还有数组。为什么是这种嵌套结构。但是如果想想“照片”应用里的“回忆”功能，会发现这些是有道理的。</td>
+</tr>
+<tr class="odd">
+<td>“回忆”本身建立于大量资产之上，允许用户回忆时，可以切换<code>“显示照片摘要”</code>或<code>“显示所有照片”</code>。通过下面的一张图解，可以更清晰地描述为什么使用数组。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/4182042d61242c2f7aca4903592a2f7e.jpg" /></td>
+</tr>
+<tr class="even">
+<td><code>Section Contents</code>数组是已排序数组。<code>索引为 0</code>的对象是最优内容，是资产集合最精炼的摘要；而<code>数组末端</code>的对象内容是最多的，包含了所有的照片数据。开发过程中，开发者需要根据具体的需求，选择性地使用。</td>
+</tr>
+<tr class="odd">
+<td>### PHCloudIdentifier 介绍</td>
+</tr>
+<tr class="even">
+<td><code>PHCloudIdentifier</code>是一个全新的概念。当你想把数据存到用户的<code>Photo Library</code>时，数据可能会被同步到用户其他的设备中。为了确保在保存的数据，合理地同步到其他设备中，iOS
+11 推出了一个新对象<code>PHCloudIdentifier</code>。</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取当前 Cloud Identifiers</span></span><br><span class="line">cloudIdentifiers <span class="operator">+=</span> dataDict.value(forKey: <span class="operator">&amp;</span>quot;contentIdentifiers<span class="operator">&amp;</span>quot;) <span class="keyword">as!</span> [<span class="type">PHCloudIdentifier</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment">//转换为 Local Identifiers</span></span><br><span class="line"><span class="keyword">let</span> localIdentifiers <span class="operator">=</span> <span class="keyword">self</span>.library.localIdentifiers(for: cloudIdentifiers)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>可以将它看做资产的<code>全局标识符</code>，但也并不像全局字符串那么简单，因为还需要处理同步和同步状态等情况。而这些复杂操作，系统已经为我们做了。你必须要做的唯一操作是，在提取之前，确保你的转换总是从<code>全局标识符</code>到<code>本地标识符</code>。可以通过<code>PHPhotoLibrary</code>里的方法来进行双向转换。</td>
+</tr>
+<tr class="odd">
+<td>### 关于“视图布局”的改进 <img
+src="https://images.xiaozhuanlan.com/photo/2017/cd2b2461bcd157389c2a743c3f101adc.jpg" /></td>
+</tr>
+<tr class="even">
+<td>例如上述这种网格布局，对用户来说是很愉快的。如果开发者可以直接访问这个布局，不是会很棒吗？在
+iOS 11 中，你确实可以进行访问了。</td>
+</tr>
+<tr class="odd">
+<td>为了支持访问，系统首先确定了一个坐标系。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/38d3b64a70bd944d2fbe210ab2b19bbb.jpg" /></td>
+</tr>
+<tr class="even">
+<td>如果你查看“回忆”功能，会发现所有内容都被排列在一个由 4x3
+单元格构成的网络中。但它是一个非正方形尺寸，不利于拓展。所以又有了下面这样的结构。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/b3f9f1c4d4e09f58e24d094f4519abcf.jpg" /></td>
+</tr>
+<tr class="odd">
+<td>例如上述实例图片的的布局，可以被转化为一个由 20
+个统一列组成的网络空间。确定了这个坐标系，就可以根据需求任意缩放。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/0ba880f78e54f3f35c44a69ec1b7ec16.png" /></td>
+</tr>
+<tr class="even">
+<td>并且，通过这个坐标系，也可以和系统互相传递坐标信息。例如上图的坐标为<code>(0, 0, 8 , 9)</code>。</td>
+</tr>
+<tr class="odd">
+<td>### PHProjectElement 介绍</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHProjectElementclass </span></span><br><span class="line"><span class="type">PHProjectElement</span> : <span class="type">NSObject</span>, <span class="type">NSSecureCoding</span> &#123;</span><br><span class="line">        <span class="comment">//权重的范围是 0.0 - 1.0，默认为 0.5 </span></span><br><span class="line"><span class="keyword">var</span> weight: <span class="type">Double</span> &#123; <span class="keyword">get</span> &#125;</span><br><span class="line">        <span class="comment">//元素在网络布局中的坐标  </span></span><br><span class="line"><span class="keyword">var</span> placement: <span class="type">CGRect</span> &#123; <span class="keyword">get</span> &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>在<code>Section Content</code>里，系统提供了一组元素。所有元素都是<code>PHProjectElement</code>的子集。这里有两个非常重要的属性：</td>
+</tr>
+<tr class="even">
+<td>- <code>placement</code>（位置） - <code>weight</code>（权重）</td>
+</tr>
+<tr class="odd">
+<td><code>“位置”属性</code>，前面已经有所介绍了，这里介绍下<code>“权重”属性</code>。再次回到“回忆”功能，在大量资产中如果想确定最相关的照片，系统需要有自己的评分系统。这里，评分系统通过给每个元素一个权重值，来代表每个元素的重要性。权重值从<code>0.0</code>到<code>1.0</code>，默认值是<code>0.5</code>，也就是说，权重值为<code>0.5</code>的资产代表普通。</td>
+</tr>
+<tr class="even">
+<td>### RegionsOfInterest 是什么</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> regionsOfInterest: [<span class="type">PHProjectRegionOfInterest</span>] &#123; <span class="keyword">get</span> &#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>这里，有这样的一个概念，称为<code>“兴趣区”</code>。也就是这里的<code>regionsOfInterest</code>属性，这是<code>PHProjectAssetElement</code>所特有的。</td>
+</tr>
+<tr class="odd">
+<td>在<code>macOS API</code>里，已经有很多方法，可以用来进行<code>面部识别</code>，从而寻找图片中的脸。但从这些方法无法知道这些脸的相关性。来看下面一副示例图：
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/477debcd87f3f7339fc7da79b66a2c8b.jpg" /></td>
+</tr>
+<tr class="even">
+<td>你会注意到，这些脸部有对应的标识符。在不同的照片里相同的脸，会看到被标记为相同的标识符。这样的表示十分有趣。如果你正在处理动画、幻灯片等效果，这将非常有用。因为你现在可以真正把大集合中的图片位置彼此联系起来了。对于体验上的改进来说，这会是一个很棒的属性。</td>
+</tr>
+<tr class="odd">
+<td>## 总结</td>
+</tr>
+<tr class="even">
+<td>本节主要介绍了 Photos APIs 的新特性，主要包含了以下几点内容：</td>
+</tr>
+<tr class="odd">
+<td>- 改进的授权模式 - 大幅优化的 UIImagePickerController -
+全新的图片格式 HEIF - 大型图片库的创建 - 及为 Photos 创建项目扩展</td>
+</tr>
+<tr class="even">
+<td>回头来看开篇提出的三点疑问：</td>
+</tr>
+<tr class="odd">
+<td>- 如何以一种不违反用户信任的方式获取及保存内容到相册？ - 是否可以为
+Photo Library 创建扩展内容？ -
+如何在应用中简单、高效地实现这些操作？</td>
+</tr>
+<tr class="even">
+<td>这些，在新的 Photos APIs 里都有了相应的解决方案。综上可以看到 Photos
+也在越来越完善，可扩展性越来越强，功能也在越来越强大。</td>
+</tr>
+<tr class="odd">
+<td>## 相关资料</td>
+</tr>
+<tr class="even">
+<td>- <a href="https://developer.apple.com/wwdc17/505">WWDC 2017 Session
+505 - What's New in Photos APIs</a> - <a
+href="https://developer.apple.com/sample-code/wwdc/2017/Creating-Large-Photo-Libraries-for-Testing.zip">WWDC
+2017 Session 505 - Creating Large Photo Libraries for Testing</a> - <a
+href="https://developer.apple.com/documentation/photos">开发者文档 -
+Photos</a> - <a
+href="https://developer.apple.com/documentation/photosui">开发者文档 -
+PhotosUI</a> - <a
+href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramework/Introduction/Intro.html#//apple_ref/doc/uid/TP40014575">PhotoKit
+示例应用</a></td>
+</tr>
+<tr class="odd">
+<td>" link_users="{}" data-body="本节要介绍的是 Photos APIs
+的一些新特性。简单的概括有下面这几点内容：</td>
+</tr>
+<tr class="even">
+<td>- UIImagePickerController 的大幅优化 - 授权模式的改进 - 动图的支持 -
+iCloud 照片图库的优化 - 照片项目的扩展</td>
+</tr>
+<tr class="odd">
+<td>后续内容，会对这几个点依次展开。</td>
+</tr>
+<tr class="even">
+<td>## UIImagePickerController 的大幅优化</td>
+</tr>
+<tr class="odd">
+<td><code>UIImagePickerController</code>是系统提供的和相册及相机交互的一个类，通过这个类，你可以在应用中选择照片和视频。在
+iOS 11 里，图片选择器有了许多的改进和新功能的引入。</td>
+</tr>
+<tr class="even">
+<td>### 隐私授权的改进</td>
+</tr>
+<tr class="odd">
+<td>一直以来，Apple
+十分关注用户的隐私安全。所以，之前在任何情况下，如果获取 Photos
+资源，都需要获取用户的授权才可以进行。正如下面弹窗这样，请求用户的授权。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/758ef482bd5a71d4ec7170c15a1bcc60.jpg" /></td>
+</tr>
+<tr class="even">
+<td>正因为授权过程的存在，使得应用程序与用户之间产生了矛盾。对于用户而言，需要他们打开一级隐私，这不是用户想要的；而对于应用程序来说，应用在未获取权限的情况下，无法执行相应的程序和操作，即便它自身有很多优秀的功能，都会因为未授权而无法使用。</td>
+</tr>
+<tr class="odd">
+<td>在 iOS 11 中，如果通过<code>UIImagePickerController</code>
+访问相册资源，这个<code>警告弹窗</code>不会再出现，会直接进行程序运行。看到这里，你或许会问：那用户的隐私保护怎么办？</td>
+</tr>
+<tr class="even">
+<td>首先需要介绍一下<code>UIImagePickerController</code>
+新的授权模式。自 iOS 11
+开始，<code>UIImagePickerController</code>成为了一个自动授权
+API。也就是说，当应用程序要显示 API
+的内容，将会是从一个<code>自动处理的沙盒</code>和<code>安全环境</code>中获取，应用不再访问用户的<code>Photo Library</code>。</td>
+</tr>
+<tr class="odd">
+<td>并且，只有用户本人可以和<code>UIImagePickerController UI</code>进行互动。当用户做出一个选择，系统会取出选中的照片或视频，发送到应用中。这样就消除了前面提出的在应用中因为授权而产生的矛盾，同时这也让用户有了更高级别的隐私。因为不存在授权，也就不会再有请求授权。使用起来更为方便了。</td>
+</tr>
+<tr class="even">
+<td>### 元数据的获取更为方便</td>
+</tr>
+<tr class="odd">
+<td>Photos
+拥有丰富的<code>元数据(metadata)</code>，内容包括创建日期、照片的格式，及一些其他不同类型的元数据。在
+iOS 11 中，获取这些信息变得容易了很多。系统提供了一个全新的键值
+<code>UIImagePickerControllerImageURL</code>，会包含所有<code>UIImagePickerController</code>的结果。我们可以使用这里的
+URL，将对应数据读入应用并按照需要进行处理。该 URL
+是<code>文件 URL</code>，指向一个应用中的<code>临时文件</code>，如果之后想对文件继续操作，建议把文件移动到更永久的文件路径中。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">imagePickerController</span>(<span class="keyword">_</span> <span class="params">picker</span>: <span class="type">UIImagePickerController</span>, <span class="params">didFinishPickingMediaWithInfo</span> <span class="params">info</span>: [<span class="params">String</span> : <span class="keyword">Any</span>]) &#123;  </span><br><span class="line">  <span class="keyword">if</span> <span class="keyword">let</span> imageURL <span class="operator">=</span> info[<span class="type">UIImagePickerControllerImageURL</span>] <span class="keyword">as?</span> <span class="type">URL</span> &#123; </span><br><span class="line">        <span class="built_in">print</span>(imageURL)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>### HEIF 图片格式的引入</td>
+</tr>
+<tr class="even">
+<td>iOS 11 中，Photos
+引入了一种新的图片格式<code>HEIF</code>。同时，Apple
+意识到生态系统完全接受<code>HEIF</code>需要一段时间，考虑到新类型图片格式的兼容性。Apple
+为<code>UIIMagePickerController</code>提供了一个新属性<code>imageExportPresent</code>，让兼容过程变得更为容易。</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> imageExportPreset: <span class="type">UIImagePickerControllerImportExportPreset</span> &#123; <span class="keyword">get</span> <span class="keyword">set</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.imageExportPreset <span class="operator">=</span> .compatible </span><br><span class="line"><span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.imageExportPreset <span class="operator">=</span> .current </span><br><span class="line"><span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td><code>imageExportPresent</code>拥有两种类型：</td>
+</tr>
+<tr class="odd">
+<td>- .compatible (兼容模式) - .current (当前模式)</td>
+</tr>
+<tr class="even">
+<td>在<code>compatible (兼容模式)</code>下，如果用户选中的源图片是<code>HEIF 格式</code>，系统会通过转换，提供一个
+JPEG 格式的图片。当然，JPEG
+是该属性的默认值，如果不需要有什么改变，就不用再做更多的事情。</td>
+</tr>
+<tr class="odd">
+<td>如果，需要获取的照片格式与拍摄时的格式相同，只需把属性值设为<code>current (当前模式)</code>，这样就会得到与
+Photo Library 里相同格式的图片，包括<code>HEIF 格式</code>。</td>
+</tr>
+<tr class="even">
+<td>### 视频文件的获取更为方便</td>
+</tr>
+<tr class="odd">
+<td>iOS 11
+中，对视频选择的功能，也有了很好的改进。暂时把这部分内容放在一边，先来简单了解下<code>AVFoundation</code>。<code>AVFoundation</code>是
+Apple
+提供的框架，用于<code>丰富编辑</code>及<code>照片播放</code>。通过<code>AVFoundation</code>导出的素材可以拥有丰富的格式。</td>
+</tr>
+<tr class="even">
+<td>值得称赞的是，<code>UIImagePickerController</code>现在也有了类似的功能，引入了一个新属性<code>videoExportPreset</code>。</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> videoExportPreset: <span class="type">String</span> &#123; <span class="keyword">get</span> <span class="keyword">set</span> &#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>你可以通过这个方法来告诉系统，你所选中的视频需要以哪种格式返回。这样，你就可以轻松得到预设格式的资源内容了。</td>
+</tr>
+<tr class="odd">
+<td>我们来看一个例子：</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> AVFoundation</span><br><span class="line"><span class="keyword">let</span> imagePicker <span class="operator">=</span> <span class="type">UIImagePickerController</span>() </span><br><span class="line">imagePicker.videoExportPreset <span class="operator">=</span> <span class="type">AVAssetExportPresetHighestQuality</span> <span class="keyword">self</span>.present(imagePicker, animated: <span class="literal">true</span>, completion: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td>如上代码中，首先，导入<code>AVFoundation</code>；接着，创建一个<code>UIIMagePickerController</code>实例，并描述我们想要资源文件以哪种格式返回（这里我们请求的是最高品质）；之后显示选择器。</td>
+</tr>
+<tr class="even">
+<td>当用户做出选择时，无论是什么格式，系统都对其进行交叉编译，得到匹配格式，之后返回给用户。关于可用预设的完整清单，可以通过接口<code>AVAssetExportSession</code>查看。</td>
+</tr>
+<tr class="odd">
+<td>### 照片和视频的保存有了新的隐私模式</td>
+</tr>
+<tr class="even">
+<td>前面，通过一些巧妙的设计，在保护用户隐私的情况下，已经实现了无缝选取。实际上，iOS
+11 也对图片和视频的保存做了很多的优化。</td>
+</tr>
+<tr class="odd">
+<td>在 iOS 11
+中，保存一张照片或一段视频到用户的图片库中，系统提供了一个全新的安全模型及权限级别。<code>UIImagePickerController</code>对于保存<code>图片资源</code>及<code>视频资源</code>分别提供了权限级别。一个是<code>UIImageWriteToSavedPhotosAlbum</code>，另一个是<code>UISaveVideoAtPathToSavedPhotosAlbum</code>。</td>
+</tr>
+<tr class="even">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">UIImageWriteToSavedPhotosAlbum</span>(<span class="keyword">_</span> <span class="params">image</span>: <span class="type">UIImage</span>, <span class="keyword">_</span> <span class="params">completionTarget</span>: <span class="keyword">Any</span><span class="operator">?</span>, <span class="keyword">_</span> <span class="params">completionSelector</span>: <span class="type">Selector</span>?, <span class="keyword">_</span> <span class="params">contextInfo</span>: <span class="type">UnsafeMutableRawPointer</span>?)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">UISaveVideoAtPathToSavedPhotosAlbum</span>(<span class="keyword">_</span> <span class="params">videoPath</span>: <span class="type">String</span>, <span class="keyword">_</span> <span class="params">completionTarget</span>: <span class="keyword">Any</span><span class="operator">?</span>, <span class="keyword">_</span> <span class="params">completionSelector</span>: <span class="type">Selector</span>?, <span class="keyword">_</span> <span class="params">contextInfo</span>: <span class="type">UnsafeMutableRawPointer</span>?)</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="odd">
+<td><img src="./resource/session505/505_add_to_photos.jpg"
+alt="Add To Your Photos" /></td>
+</tr>
+<tr class="even">
+<td>这两种方式都只会请求<code>添加授权</code>，对于用户来说<code>添加授权</code>是很小的要求。因为这个权限只允许添加内容到用户的
+Photo
+Library，而不涉及到读取权限。所以，很大程度上，用户会愿意给出这个权限。</td>
+</tr>
+<tr class="odd">
+<td>### PHAsset 获取的改进</td>
+</tr>
+<tr class="even">
+<td>我们来看一个例子：</td>
+</tr>
+<tr class="odd">
+<td><figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">imagePickerController</span>(<span class="keyword">_</span> <span class="params">picker</span>: <span class="type">UIImagePickerController</span>, <span class="params">didFinishPickingMediaWithInfo</span> <span class="params">info</span>: [<span class="params">String</span> : <span class="keyword">Any</span>]) &#123;</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">let</span> asset <span class="operator">=</span> info[<span class="type">UIImagePickerControllerPHAsset</span>] <span class="keyword">as?</span> <span class="type">PHAsset</span> &#123;</span><br><span class="line">        <span class="built_in">print</span>(asset)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></td>
+</tr>
+<tr class="even">
+<td>上述代码中，我们实现了一个代理方法。在获得结果词典时，有了一个全新的键，键名为<code>UIIMagePickerControllerPHAsset</code>。取得该键的值，将会得到对应的资产对象，可以对其进行自由使用。</td>
+</tr>
+<tr class="odd">
+<td>通过这些改变，增强了用户的隐私保护，也让<code>UIIMagePickerController</code>成为更强大而功能齐全的
+API，满足了市面上大部分应用的需求。然而，有时会出现需要和照片框架进行更深入集成的需求，在这些场景下，Apple
+推荐使用<code>PhotoKit</code>。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="photokit">PhotoKit</h2>
+<p>和照片相关的应用，一直以来是 App Store
+里最受欢迎的一类。这一次，<code>PhotoKit</code>做了一些改进，可以让你写出拥有更棒用户体验的新功能。</p>
+<h3 id="live-photo-介绍">Live Photo 介绍</h3>
+<p>首先一起了解下<code>Live Photo</code>的效果。Live Photo
+效果包含：</p>
+<ul>
+<li><strong>循环效果</strong></li>
+<li><strong>弹跳效果</strong></li>
+<li><strong>长曝光效果等</strong></li>
+</ul>
+<p>其中<code>循环效果</code>，是通过仔细分析视频帧，并无缝地和这些视频帧无止境循环缝合在一起；<code>弹跳效果</code>，它的工作原理和<code>循环效果</code>也是相似的；最后是<code>长曝光效果</code>，它将分析
+Live Photo 的视频帧，创造令人惊艳的静物。</p>
+<p>现存的<code>PhotoKit</code>媒体类型有这些：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">enum</span> <span class="title class_">PHAssetMediaType</span> : <span class="title class_">Int</span> &#123;</span><br><span class="line">       <span class="keyword">case</span> unknown</span><br><span class="line">       <span class="keyword">case</span> image</span><br><span class="line">       <span class="keyword">case</span> video</span><br><span class="line">       <span class="keyword">case</span> audio</span><br><span class="line">   &#125;</span><br><span class="line">   </span><br><span class="line">   <span class="keyword">struct</span> <span class="title class_">PHAssetMediaSubtype</span> : <span class="title class_">OptionSet</span> &#123;</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoPanorama</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoHDR</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoScreenshot</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoLive</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> photoDepthEffect</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoStreamed</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoHighFrameRate</span><br><span class="line">       <span class="keyword">static</span> <span class="keyword">var</span> videoTimelapse</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>如果用户拍摄了一段视频，会想在应用中进行观看，并将拍摄的内容以<code>视频方式</code>使用。如果用户拍摄了一张<code>Live Photo</code>，同样会想要在应用中看到内容以<code>Live Photo</code>的方式呈现。为此，iOS
+11 提供了三种媒体类型来实现对应目标：</p>
+<ul>
+<li><strong>image</strong></li>
+<li><strong>video</strong></li>
+<li><strong>photoLive</strong></li>
+</ul>
+<p><code>Live Photo</code>效果比较复杂。为此，iOS 11
+中引入了全新的<code>PHAsset</code>属性<code>playbackStyle</code>，让你可以简单实现<code>Live Photo</code>的播放。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">PHAsset</span> : <span class="title class_">PHObject</span> &#123;</span><br><span class="line">    <span class="keyword">var</span> playbackStyle: <span class="type">PHAssetPlaybackStyle</span> &#123; <span class="keyword">get</span> &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">enum</span> <span class="title class_">PHAssetPlaybackStyle</span> : <span class="title class_">Int</span> &#123;</span><br><span class="line">    <span class="keyword">case</span> unsupported</span><br><span class="line">    <span class="keyword">case</span> image</span><br><span class="line">    <span class="keyword">case</span> imageAnimated</span><br><span class="line">    <span class="keyword">case</span> livePhoto</span><br><span class="line">    <span class="keyword">case</span> video</span><br><span class="line">    <span class="keyword">case</span> videoLooping</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>playbackStyle</code>属性，是<code>唯一</code>可以用来查看和决定要使用什么样的图片管理器
+API、用什么样的视图来表现、以及为该视图设置什么样的 UI 限制。同时，Apple
+更新了<a
+href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramework/Introduction/Intro.html#//apple_ref/doc/uid/TP40014575">PhotoKit
+示例应用</a>，包含所有这些新的播放风格。这里介绍下其中的三种，它们和前面提到的<code>Live Photo 效果</code>相关。从<code>imageAnimated</code>开始。</p>
+<h4 id="animated-image">Animated Image</h4>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">imageManager.requestImageData(for: asset, options: options) &#123;</span><br><span class="line">    (data, dataUTI,  orientation, info) <span class="keyword">in</span>    <span class="comment">// 使用示例项目中的 animatedImageView</span></span><br><span class="line">    <span class="keyword">let</span> animatedImage <span class="operator">=</span> <span class="type">AnimatedImage</span>(data: data)</span><br><span class="line">    animatedImageView.animatedImage <span class="operator">=</span> animatedImage</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>iOS 11
+有了一个期待已久的新功能。现在，在内置应用“照片”中支持了<code>动画 GIF</code>的播放。如果要在你的应用中播放
+GIF，只需要从图像管理器请求图像数据，然后使用图像 IO 和 Core Graphics
+进行播放。接下来是<code>Live Photo</code>。</p>
+<h4 id="live-photo">Live Photo</h4>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">imageManager.requestLivePhoto(for: asset, targetSize: pixelSize, contentMode: .aspectFill, options: options) &#123;</span><br><span class="line">    (livePhoto, info) <span class="keyword">in</span>    <span class="comment">// 使用示例项目中的 PHLivePhotoView</span></span><br><span class="line">    livePhotoView.livePhoto <span class="operator">=</span> livePhoto</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>Live Photos</code>一直很受用户的关注，如何在应用中更好地呈现它们，非常重要，也非常简单。在如上的这个例子里，首先从图像管理器<code>请求</code>一张<code>Live Photo</code>，之后设置<code>PHLivePhotoView</code>。在你的应用里，用户可以通过轻触播放一张<code>Live Photo</code>，正如用户在内置<code>“照片”应用</code>里的操作一样。</p>
+<h4 id="looping-video">Looping Video</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">swiftimageManager.requestPlayerItem(forVideo: asset, options: options) &#123; </span><br><span class="line">    playerItem, info in</span><br><span class="line">    DispatchQueue.main.async &#123;</span><br><span class="line">        let player = AVQueuePlayer()</span><br><span class="line">        playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)</span><br><span class="line">        playerLayer.player = player</span><br><span class="line">        player.play()</span><br><span class="line">    &#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>在今年所推出的视频循环中，既包括<code>弹跳效果</code>，也包括<code>Live Photo</code>的循环效果。现在，在你的应用里播放这些和播放普通视频非常相似。可以请求播放器项目，并使用<code>AVFoundation</code>播放，还可以使用<code>AVPlayerLooper</code>取得循环效果。
+可见，表现用户的媒体变得更为轻便，以他们真正想表现的方式，你也可以在自己的应用中，对这些全新的媒体类型，更为创新地表现。</p>
+<h2 id="icloud-照片图库的改进">iCloud 照片图库的改进</h2>
+<p><img
+src="https://images.xiaozhuanlan.com/photo/2017/fe83154503f1c3e58ce11fbf317bc544.jpg" /></p>
+<p>“iCloud 照片图库”可以与“照片”应用完美搭配使用。当用户开启“iCloud
+照片图库”时，用户的照片和视频会被安全上传到 iCloud
+中，同时这些更改会同步到用户的其他设备中。自动上传 iCloud
+操作的触发条件是，设备连接到 Wi-Fi
+且电量充足。根据用户的网络情况，在所有设备和 iCloud.com
+上看到同步照片和视频所需的时间可能会不同。</p>
+<p>使用 iPhone
+拍照的用户，也常会使用“照片”相关的第三方应用。这些用户，大致可以分为 3
+类：轻度用户、中度爱好者和重度专业用户。对于重度用户而言，由于自身图库中有很多内容，在第一次使用应用时，需要加载大批量的照片，这个过程中会十分耗时。而且这种耗时的加载状态，会对应用的用户体验大打折扣。</p>
+<p>在 iOS 11
+中，针对如何更快速高效地操作“大型照片图库”这一点做了优化，后面的内容会依次展开描述。</p>
+<h3
+id="创建一个用于测试的大型照片图库">创建一个用于测试的“大型照片图库”</h3>
+<p>前面提到，如果图库中有大量内容，在应用加载数据时，会处于长时间的加载状态。而你如果想创建一个拥有大批量图片的图库，还是有些难度的。友好的是，Apple
+为开发者提供了一个用户创建图库的示例应用：<a
+href="https://developer.apple.com/sample-code/wwdc/2017/Creating-Large-Photo-Libraries-for-Testing.zip">Photo
+Library
+Filler</a>。下载该应用并安装到测试设备，点击<code>“Add Photos” 按钮</code>，它便会迅速生成一个拥有大批量图片的图库供测试使用。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/bbaf0214e3d8cad2d6e968c56487f529.jpg" /></p>
+<p>到这里，你就拥有了一个可用于测试的<code>“大型照片图库”</code>。</p>
+<h3 id="现在如何从照片图库提取图片">现在，如何从“照片图库”提取图片</h3>
+<p>看下面这段代码：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(with: options)</span><br></pre></td></tr></table></figure>
+<p>这个方法用于从用户的<code>“照片图库”</code>提取图片，等号右侧用于<code>提取资产</code>，左侧为<code>提取结果</code>。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> options <span class="operator">=</span> <span class="type">PHFetchOptions</span>()options.predicate <span class="operator">=</span> <span class="type">NSPredicate</span>(format: <span class="operator">&amp;</span>quot;isFavorite <span class="operator">=</span> <span class="operator">%</span>d<span class="operator">&amp;</span>quot;, <span class="literal">true</span>)</span><br><span class="line">options.sortDescriptors <span class="operator">=</span> [<span class="type">NSSortDescriptor</span>(key: <span class="operator">&amp;</span>quot;creationDate<span class="operator">&amp;</span>quot;, ascending: <span class="literal">true</span>)]</span><br><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(with: options)</span><br></pre></td></tr></table></figure>
+<p>在上述代码中，首先提取库里<code>所有的 Asset</code>，并进行筛选，筛选条件为<code>isFavorite = true</code>，之后按照对应的创建日期进行排序。这时，如果在这些自定义提取里<code>发现耗时</code>，那么简化这里的筛选条件会十分必要。不同的筛选方式，可能会意味着查询耗时的巨大差异。造成这种差异的原因是你的操作可能在数据库优化路径之外进行，同时又试图回到优化路径中，这样就产生了不同的耗时差距。</p>
+<p>比这种自定义提取更好的是，尽可能避免这种操作。例如下面这个例子中，我们实际上提取的是用户<code>最喜欢</code>的<code>智能相册</code>。然后在智能相册里<code>提取 Asset</code>。这样既可以使用已有的<code>关键字</code>和<code>排序描述符</code>，还可以保证操作是在数据库优化路径中进行的。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> smartAlbums <span class="operator">=</span> <span class="type">PHAssetCollection</span>.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumFavorites, options: <span class="literal">nil</span>)</span><br><span class="line"><span class="keyword">let</span> assets <span class="operator">=</span> <span class="type">PHAsset</span>.fetchAssets(in: smartAlbums.firstObject, options: <span class="literal">nil</span>)</span><br></pre></td></tr></table></figure>
+<p>接着，看下返回结果。返回对象是一个<code>PHFetchResult</code>类型的对象。<code>PHFetchResult 类型</code>非常像一个数列，并且可以像数组一样来使用。但从内部实现来看，<code>PHFetchResult</code>和数列的工作机制还是完全不同的。并且这也是<code>PhotoKit</code>在大型图库操作方面，能够如此快速高效的原因之一。</p>
+<p>我们来看看它的内部工作机制。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/b7383b7c7eddae3304c48d283c7d75ee.jpg" /></p>
+<p>最开始，它只包含一个<code>标识符列表</code>。这意味着可以迅速返回对应的
+Asset。但开始使用后，有更多工作必须执行。我们以一个枚举作为例子。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/94a0ff75cb87c884023be87268c89b97.jpg" /></p>
+<p>在这里，我们从<code>索引 0 开始</code>枚举。目前只有一个标识符，你还需要从数据库里提取元数据。为此创建一个<code>PHAsset 对象</code>，以便将
+Asset 的元数据返回给你。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/16d78b56086431e4f054daede150d4d2.jpg" /></p>
+<p>实际上，同时也创建了<code>一个批处理</code>。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/5662e0c527a4b13085762d09fa1cc817.jpg" /></p>
+<p>当我们继续枚举时，<code>索引 1 和 2</code>实际已经在内存中了。枚举继续，它将访问硬盘，获取后续
+Asset 的元数据。</p>
+<p>在提取结果量级较小的情况下，这样的提取，并不会有太大的影响。但如果提取结果包含<code>10万个 Asset</code>。其中，每一批都需要<code>占用几 kb 内存</code>。如果是<code>10w 批</code>，那将会产生<code>几百兆</code>的内存用量。更糟糕的是，每一批都需要<code>几毫秒</code>的提取时间，如果有<code>10w 批</code>，就需要<code>消耗 10s</code>来枚举这样的一个大型提取结果。所以，应该尽量<code>避免枚举操作</code>。</p>
+<h3 id="在-phfetchresult-中查询-asset-更优的方式">在 PHFetchResult
+中查询 Asset 更优的方式</h3>
+<p>实际开发过程中，枚举操作总是可能会出现的。这里列举一个例子。现在，你需要从一个提取结果中查询一个<code>Asset 的索引</code>。</p>
+<p>第一种方式，可以通过枚举该提取结果，通过<code>“等于”</code>比较返回的对象，来获取对应<code>Asset 的索引</code>。但是，枚举会非常耗时，所以更好的方法是通过另一种方式，使用<code>高端 API</code>。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/2a142436035188537528e1eaef142487.jpg" /></p>
+<p>如上，通过使用<code>indexOfObject</code>来进行 Asset
+索引的查询。而<code>indexOfObject</code>方法内部是通过比较“对象标识符”，以找到符合条件的
+Asset，这样就不会有附加的“硬盘访问”和“数据库提取”。进而避免了第一种方式中，因为枚举出现的耗时操作。同样的，对<code>containtsObject</code>也是如此。</p>
+<h2 id="照片项目的拓展">照片项目的拓展</h2>
+<p>一直以来，Apple 允许用户围绕照片创建丰富的有创意的项目。</p>
+<h3
+id="phprojectextensioncontroller-的引入">PHProjectExtensionController
+的引入</h3>
+<p>现在，<code>“照片”</code>中添加了一个<code>新的扩展</code>。对应的，<code>Xcode</code>中也添加了一个<code>新模板</code>，开发者在自己的应用里可以<code>轻松创建</code>这些扩展。此外，<code>“照片”应用</code>会自动发现你的拓展，大大提高了扩展应用被用户知道的概率。不仅如此，Apple
+为了让这些扩展更容易为用户所发现，给这些扩展应用提供了<code>App Store</code>的直接链接。该链接会打开<code>App Store</code>窗口，并自动显示支持该扩展的应用。</p>
+<p><img
+src="https://images.xiaozhuanlan.com/photo/2017/756e797b9eced7d408432f876e21c673.jpg" />
+扩展只存在于开发者的应用内。对于开发者来说，如果你在 App Store
+已经有了一个关于 Photos
+相关的应用。此时，就可以将扩展代码移动到该扩展空间内，并加以利用。之后，添加一个视图控制器，并实现<code>PHProjectExtensionController</code>协议。一切就位，“照片应用”便可以发现你的扩展了。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/e3a53f0348049d39207bc4656a78e8fa.jpg" /></p>
+<p>在用户选择“扩展应用”，并用它创建一个项目时，<code>&amp;quot;照片应用&amp;quot;</code>会发送一些字节数据（<code>PHProjectExtensionContext</code>、<code>PHProjectInfo</code>）到对应的<code>“扩展应用”</code>。之后<code>“照片应用”</code>得到相应的返回结果，知道可以安装你的视图控制器。</p>
+<p>过程中遵循的协议本身，对支持的<code>项目类型</code>有一个可选属性，可用于快速描述想让用户选择的选项。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">optional</span> <span class="keyword">public</span> <span class="keyword">var</span> supportedProjectTypes: [<span class="type">PHProjectTypeDescription</span>] &#123; <span class="keyword">get</span> &#125;</span><br></pre></td></tr></table></figure>
+<p>在实际使用过程中，用户既可以选择退出，也可以选择直接进入扩展。这些，在视图控制器里也有特定的函数方法。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">protocol</span> <span class="title class_">PHProjectExtensionController</span> : <span class="title class_">NSObjectProtocol</span> &#123;</span><br><span class="line">    <span class="comment">//第一次使用该扩展创建项目时调用  </span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">beginProject</span>(<span class="params">with</span> <span class="params">extensionContext</span>: <span class="type">PHProjectExtensionContext</span>, </span><br><span class="line">        <span class="params">projectInfo</span>: <span class="type">PHProjectInfo</span>, <span class="params">completion</span>: <span class="keyword">@escaping</span> (<span class="type">Error</span>?) -&gt; <span class="type">Void</span>)</span><br><span class="line">        </span><br><span class="line">    <span class="comment">//每次用户回到以前创建的项目时调用</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">resumeProject</span>(<span class="params">with</span> <span class="params">extensionContext</span>: <span class="type">PHProjectExtensionContext</span>, </span><br><span class="line">        <span class="params">completion</span>: <span class="keyword">@escaping</span> (<span class="type">Error</span>?) -&gt; <span class="type">Void</span>)</span><br><span class="line">        </span><br><span class="line">    <span class="comment">//用户离开项目时调用 </span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">func</span> <span class="title function_">finishProject</span>(<span class="params">completionHandler</span> <span class="params">completion</span>: <span class="keyword">@escaping</span> () -&gt; <span class="type">Void</span>) </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过第一个函数方法，我们可以得到上下文及项目详细。在第一次使用该扩展创建项目时，会调用该方法。</p>
+<p>第二个函数方法，我们同样可以获得上下文。在每次用户回到扩展项目时，会调用该方法。</p>
+<p>最后一个函数方法。如果用户在扩展项目内，当他们决定切换离开，会调用该函数。通过回调，你可以清理任何正在处理的数据，或是关闭任何让处理器忙碌的任务，或是正在执行的动画。</p>
+<h3 id="phprojectextensioncontext-是什么">PHProjectExtensionContext
+是什么</h3>
+<p><img
+src="https://images.xiaozhuanlan.com/photo/2017/3135a448529f42fa40631795582e9620.jpg" />
+在<code>PHProjectExtensionContext</code>这个容器里，包含两个非常重要的对象。一个是<code>PHProject</code>，另一个是<code>PHPhotoLibrary</code>。</p>
+<h4 id="phproject-介绍">PHProject 介绍</h4>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHProject.h </span></span><br><span class="line"><span class="comment">// Photos</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">PHProject</span> : <span class="title class_">PHAssetCollection</span> &#123;    <span class="keyword">var</span> projectExtensionData: <span class="type">Data</span> &#123; <span class="keyword">get</span> &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>PHProject</code>本身只是<code>PHAsset</code>的一个<code>子集</code>。在子集中，创建<code>PHProject</code>，只添加了一个非常重要的属性<code>projectExtensionData</code>。可以用于保存任何你需要的数据，它是你正在使用的<code>资产标识符</code>的列表。也许是一些基本的<code>布局信息</code>或<code>配置信息</code>。同时属性<code>projectExtensionData</code>并不是为了照片缓存、缩略图之类的存在。因为这些功能，你可以快速地创建或把它们缓存到其他位置。为了它小而有用，抛开了这些功能，并且<code>projectExtensionData</code>被限制定为<code>1 兆</code>。因为这里面的信息，是一系列的字符串，所以<code>1 兆</code>大小已经足够了。即使用户不断创建项目，也不会增大用户的库。</p>
+<p><strong>PHProjectChangeRequest</strong></p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    <span class="keyword">let</span> changeRequest <span class="operator">=</span> <span class="type">PHProjectChangeRequest</span>(project: <span class="keyword">self</span>.project)    </span><br><span class="line">    <span class="keyword">try</span> <span class="keyword">self</span>.library.performChangesAndWait &#123; </span><br><span class="line">        changeRequest.projectExtensionData <span class="operator">=</span> <span class="type">NSKeyedArchiver</span>.archivedData(withRootObject: cloudIdentifiers) </span><br><span class="line">    &#125;&#125; <span class="keyword">catch</span> &#123;   </span><br><span class="line">  <span class="built_in">print</span>(<span class="operator">&amp;</span>quot;<span class="type">Failed</span> to save project data: \(error.localizedDescription)<span class="operator">&amp;</span>quot;) </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>设置数据非常简单。只需按上述实例化，实例化后，可以在<code>Photo Library</code>调用<code>performChangesAndWait</code>函数，在里面将数据设置成任何你想要的样式。</p>
+<h3 id="phprojectinfo-介绍">PHProjectInfo 介绍</h3>
+<p>最高层的<code>ProductInfo</code>分为下面这几个区： <img
+src="https://images.xiaozhuanlan.com/photo/2017/4780125d766ea2c6d3c52bbf861be9c6.jpg" /></p>
+<p>当看到这个构造时，可能会问，为什么数组里面还有数组。为什么是这种嵌套结构。但是如果想想“照片”应用里的“回忆”功能，会发现这些是有道理的。</p>
+<p>“回忆”本身建立于大量资产之上，允许用户回忆时，可以切换<code>“显示照片摘要”</code>或<code>“显示所有照片”</code>。通过下面的一张图解，可以更清晰地描述为什么使用数组。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/4182042d61242c2f7aca4903592a2f7e.jpg" /></p>
+<p><code>Section Contents</code>数组是已排序数组。<code>索引为 0</code>的对象是最优内容，是资产集合最精炼的摘要；而<code>数组末端</code>的对象内容是最多的，包含了所有的照片数据。开发过程中，开发者需要根据具体的需求，选择性地使用。</p>
+<h3 id="phcloudidentifier-介绍">PHCloudIdentifier 介绍</h3>
+<p><code>PHCloudIdentifier</code>是一个全新的概念。当你想把数据存到用户的<code>Photo Library</code>时，数据可能会被同步到用户其他的设备中。为了确保在保存的数据，合理地同步到其他设备中，iOS
+11 推出了一个新对象<code>PHCloudIdentifier</code>。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取当前 Cloud Identifiers</span></span><br><span class="line">cloudIdentifiers <span class="operator">+=</span> dataDict.value(forKey: <span class="operator">&amp;</span>quot;contentIdentifiers<span class="operator">&amp;</span>quot;) <span class="keyword">as!</span> [<span class="type">PHCloudIdentifier</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment">//转换为 Local Identifiers</span></span><br><span class="line"><span class="keyword">let</span> localIdentifiers <span class="operator">=</span> <span class="keyword">self</span>.library.localIdentifiers(for: cloudIdentifiers)</span><br></pre></td></tr></table></figure>
+<p>可以将它看做资产的<code>全局标识符</code>，但也并不像全局字符串那么简单，因为还需要处理同步和同步状态等情况。而这些复杂操作，系统已经为我们做了。你必须要做的唯一操作是，在提取之前，确保你的转换总是从<code>全局标识符</code>到<code>本地标识符</code>。可以通过<code>PHPhotoLibrary</code>里的方法来进行双向转换。</p>
+<h3 id="关于视图布局的改进">关于“视图布局”的改进</h3>
+<p><img
+src="https://images.xiaozhuanlan.com/photo/2017/cd2b2461bcd157389c2a743c3f101adc.jpg" /></p>
+<p>例如上述这种网格布局，对用户来说是很愉快的。如果开发者可以直接访问这个布局，不是会很棒吗？在
+iOS 11 中，你确实可以进行访问了。</p>
+<p>为了支持访问，系统首先确定了一个坐标系。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/38d3b64a70bd944d2fbe210ab2b19bbb.jpg" /></p>
+<p>如果你查看“回忆”功能，会发现所有内容都被排列在一个由 4x3
+单元格构成的网络中。但它是一个非正方形尺寸，不利于拓展。所以又有了下面这样的结构。
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/b3f9f1c4d4e09f58e24d094f4519abcf.jpg" /></p>
+<p>例如上述实例图片的的布局，可以被转化为一个由 20
+个统一列组成的网络空间。确定了这个坐标系，就可以根据需求任意缩放。 <img
+src="https://images.xiaozhuanlan.com/photo/2017/0ba880f78e54f3f35c44a69ec1b7ec16.png" /></p>
+<p>并且，通过这个坐标系，也可以和系统互相传递坐标信息。例如上图的坐标为<code>(0, 0, 8 , 9)</code>。</p>
+<h3 id="phprojectelement-介绍">PHProjectElement 介绍</h3>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHProjectElementclass </span></span><br><span class="line"><span class="type">PHProjectElement</span> : <span class="type">NSObject</span>, <span class="type">NSSecureCoding</span> &#123;</span><br><span class="line">        <span class="comment">//权重的范围是 0.0 - 1.0，默认为 0.5 </span></span><br><span class="line"><span class="keyword">var</span> weight: <span class="type">Double</span> &#123; <span class="keyword">get</span> &#125;</span><br><span class="line">        <span class="comment">//元素在网络布局中的坐标  </span></span><br><span class="line"><span class="keyword">var</span> placement: <span class="type">CGRect</span> &#123; <span class="keyword">get</span> &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<code>Section Content</code>里，系统提供了一组元素。所有元素都是<code>PHProjectElement</code>的子集。这里有两个非常重要的属性：</p>
+<ul>
+<li><code>placement</code>（位置）</li>
+<li><code>weight</code>（权重）</li>
+</ul>
+<p><code>“位置”属性</code>，前面已经有所介绍了，这里介绍下<code>“权重”属性</code>。再次回到“回忆”功能，在大量资产中如果想确定最相关的照片，系统需要有自己的评分系统。这里，评分系统通过给每个元素一个权重值，来代表每个元素的重要性。权重值从<code>0.0</code>到<code>1.0</code>，默认值是<code>0.5</code>，也就是说，权重值为<code>0.5</code>的资产代表普通。</p>
+<h3 id="regionsofinterest-是什么">RegionsOfInterest 是什么</h3>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> regionsOfInterest: [<span class="type">PHProjectRegionOfInterest</span>] &#123; <span class="keyword">get</span> &#125;</span><br></pre></td></tr></table></figure>
+<p>这里，有这样的一个概念，称为<code>“兴趣区”</code>。也就是这里的<code>regionsOfInterest</code>属性，这是<code>PHProjectAssetElement</code>所特有的。</p>
+<p>在<code>macOS API</code>里，已经有很多方法，可以用来进行<code>面部识别</code>，从而寻找图片中的脸。但从这些方法无法知道这些脸的相关性。来看下面一副示例图：
+<img
+src="https://images.xiaozhuanlan.com/photo/2017/477debcd87f3f7339fc7da79b66a2c8b.jpg" /></p>
+<p>你会注意到，这些脸部有对应的标识符。在不同的照片里相同的脸，会看到被标记为相同的标识符。这样的表示十分有趣。如果你正在处理动画、幻灯片等效果，这将非常有用。因为你现在可以真正把大集合中的图片位置彼此联系起来了。对于体验上的改进来说，这会是一个很棒的属性。</p>
+<h2 id="总结">总结</h2>
+<p>本节主要介绍了 Photos APIs 的新特性，主要包含了以下几点内容：</p>
+<ul>
+<li>改进的授权模式</li>
+<li>大幅优化的 UIImagePickerController</li>
+<li>全新的图片格式 HEIF</li>
+<li>大型图片库的创建</li>
+<li>及为 Photos 创建项目扩展</li>
+</ul>
+<p>回头来看开篇提出的三点疑问：</p>
+<ul>
+<li>如何以一种不违反用户信任的方式获取及保存内容到相册？</li>
+<li>是否可以为 Photo Library 创建扩展内容？</li>
+<li>如何在应用中简单、高效地实现这些操作？</li>
+</ul>
+<p>这些，在新的 Photos APIs 里都有了相应的解决方案。综上可以看到 Photos
+也在越来越完善，可扩展性越来越强，功能也在越来越强大。</p>
+<h2 id="相关资料">相关资料</h2>
+<ul>
+<li><a href="https://developer.apple.com/wwdc17/505">WWDC 2017 Session
+505 - What's New in Photos APIs</a></li>
+<li><a
+href="https://developer.apple.com/sample-code/wwdc/2017/Creating-Large-Photo-Libraries-for-Testing.zip">WWDC
+2017 Session 505 - Creating Large Photo Libraries for Testing</a></li>
+<li><a
+href="https://developer.apple.com/documentation/photos">开发者文档 -
+Photos</a></li>
+<li><a
+href="https://developer.apple.com/documentation/photosui">开发者文档 -
+PhotosUI</a></li>
+<li><a
+href="https://developer.apple.com/library/content/samplecode/UsingPhotosFramework/Introduction/Intro.html#//apple_ref/doc/uid/TP40014575">PhotoKit
+示例应用</a></li>
+</ul>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2017/09/10/2017-09-10-yyimage/" title="YYImage 源码梳理">
+                    <div class="nextTitle">YYImage 源码梳理</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2016/05/15/2016-05-15-http-and-https/" title="HTTP 和 HTTPS">
+                    <div class="prevTitle">HTTP 和 HTTPS</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1504022400000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#uiimagepickercontroller-%E7%9A%84%E5%A4%A7%E5%B9%85%E4%BC%98%E5%8C%96"><span class="toc-number">1.</span> <span class="toc-text">UIImagePickerController
+的大幅优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9A%90%E7%A7%81%E6%8E%88%E6%9D%83%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="toc-number">1.1.</span> <span class="toc-text">隐私授权的改进</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%83%E6%95%B0%E6%8D%AE%E7%9A%84%E8%8E%B7%E5%8F%96%E6%9B%B4%E4%B8%BA%E6%96%B9%E4%BE%BF"><span class="toc-number">1.2.</span> <span class="toc-text">元数据的获取更为方便</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#heif-%E5%9B%BE%E7%89%87%E6%A0%BC%E5%BC%8F%E7%9A%84%E5%BC%95%E5%85%A5"><span class="toc-number">1.3.</span> <span class="toc-text">HEIF 图片格式的引入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%86%E9%A2%91%E6%96%87%E4%BB%B6%E7%9A%84%E8%8E%B7%E5%8F%96%E6%9B%B4%E4%B8%BA%E6%96%B9%E4%BE%BF"><span class="toc-number">1.4.</span> <span class="toc-text">视频文件的获取更为方便</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%85%A7%E7%89%87%E5%92%8C%E8%A7%86%E9%A2%91%E7%9A%84%E4%BF%9D%E5%AD%98%E6%9C%89%E4%BA%86%E6%96%B0%E7%9A%84%E9%9A%90%E7%A7%81%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.5.</span> <span class="toc-text">照片和视频的保存有了新的隐私模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#phasset-%E8%8E%B7%E5%8F%96%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="toc-number">1.6.</span> <span class="toc-text">PHAsset 获取的改进</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#photokit"><span class="toc-number">2.</span> <span class="toc-text">PhotoKit</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#live-photo-%E4%BB%8B%E7%BB%8D"><span class="toc-number">2.1.</span> <span class="toc-text">Live Photo 介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#animated-image"><span class="toc-number">2.1.1.</span> <span class="toc-text">Animated Image</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#live-photo"><span class="toc-number">2.1.2.</span> <span class="toc-text">Live Photo</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#looping-video"><span class="toc-number">2.1.3.</span> <span class="toc-text">Looping Video</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#icloud-%E7%85%A7%E7%89%87%E5%9B%BE%E5%BA%93%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="toc-number">3.</span> <span class="toc-text">iCloud 照片图库的改进</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E7%94%A8%E4%BA%8E%E6%B5%8B%E8%AF%95%E7%9A%84%E5%A4%A7%E5%9E%8B%E7%85%A7%E7%89%87%E5%9B%BE%E5%BA%93"><span class="toc-number">3.1.</span> <span class="toc-text">创建一个用于测试的“大型照片图库”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%8E%B0%E5%9C%A8%E5%A6%82%E4%BD%95%E4%BB%8E%E7%85%A7%E7%89%87%E5%9B%BE%E5%BA%93%E6%8F%90%E5%8F%96%E5%9B%BE%E7%89%87"><span class="toc-number">3.2.</span> <span class="toc-text">现在，如何从“照片图库”提取图片</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8-phfetchresult-%E4%B8%AD%E6%9F%A5%E8%AF%A2-asset-%E6%9B%B4%E4%BC%98%E7%9A%84%E6%96%B9%E5%BC%8F"><span class="toc-number">3.3.</span> <span class="toc-text">在 PHFetchResult
+中查询 Asset 更优的方式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%85%A7%E7%89%87%E9%A1%B9%E7%9B%AE%E7%9A%84%E6%8B%93%E5%B1%95"><span class="toc-number">4.</span> <span class="toc-text">照片项目的拓展</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#phprojectextensioncontroller-%E7%9A%84%E5%BC%95%E5%85%A5"><span class="toc-number">4.1.</span> <span class="toc-text">PHProjectExtensionController
+的引入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#phprojectextensioncontext-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">4.2.</span> <span class="toc-text">PHProjectExtensionContext
+是什么</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#phproject-%E4%BB%8B%E7%BB%8D"><span class="toc-number">4.2.1.</span> <span class="toc-text">PHProject 介绍</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#phprojectinfo-%E4%BB%8B%E7%BB%8D"><span class="toc-number">4.3.</span> <span class="toc-text">PHProjectInfo 介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#phcloudidentifier-%E4%BB%8B%E7%BB%8D"><span class="toc-number">4.4.</span> <span class="toc-text">PHCloudIdentifier 介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B3%E4%BA%8E%E8%A7%86%E5%9B%BE%E5%B8%83%E5%B1%80%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="toc-number">4.5.</span> <span class="toc-text">关于“视图布局”的改进</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#phprojectelement-%E4%BB%8B%E7%BB%8D"><span class="toc-number">4.6.</span> <span class="toc-text">PHProjectElement 介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#regionsofinterest-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">4.7.</span> <span class="toc-text">RegionsOfInterest 是什么</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E8%B5%84%E6%96%99"><span class="toc-number">6.</span> <span class="toc-text">相关资料</span></a></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>

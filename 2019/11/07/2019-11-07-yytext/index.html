@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="富文本框架里YYText在性能方面的表现很出色，它基于 CoreText 做了大量基础处理并实现了两个上层视图组件：YYLabel 和 YYTextView。在了解富文本处理之前，我们还需要对 CoreText 基础知识做一些了解。本篇主要梳理 YYText 中 CoreText 的底层基础部分处理。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YYText 中的 CoreText">
+<meta property="og:url" content="http://example.com/2019/11/07/2019-11-07-yytext/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="富文本框架里YYText在性能方面的表现很出色，它基于 CoreText 做了大量基础处理并实现了两个上层视图组件：YYLabel 和 YYTextView。在了解富文本处理之前，我们还需要对 CoreText 基础知识做一些了解。本篇主要梳理 YYText 中 CoreText 的底层基础部分处理。">
+<meta property="og:locale">
+<meta property="article:published_time" content="2019-11-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2019-11-06T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="源码阅读">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>YYText 中的 CoreText · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">YYText 中的 CoreText</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                YYText 中的 CoreText
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS/源码阅读"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS/源码阅读
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="源码阅读">源码阅读</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">1.9k</span>阅读时长: <span class="post-count reading-time">7 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2019/11/07</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <p>富文本框架里<a
+href="https://github.com/ibireme/YYText">YYText</a>在性能方面的表现很出色，它基于
+CoreText 做了大量基础处理并实现了两个上层视图组件：YYLabel 和
+YYTextView。在了解富文本处理之前，我们还需要对 CoreText
+基础知识做一些了解。本篇主要梳理 YYText 中 CoreText
+的底层基础部分处理。</p>
+<span id="more"></span>
+<h2 id="框架概述">框架概述</h2>
+<p>iOS 中我们常会在主线程中进行 UI
+的绘制，但当绘制压力过大时会造成页面卡顿情况的出现。一种解决思路是，通过多线程在异步线程进行图形的绘制，以减轻主线程的压力。</p>
+<p>YYText 框架的实现思路也是这样的。</p>
+<ul>
+<li>创建自定义绘制线程</li>
+<li>在该线程中创建图形上下文</li>
+<li>通过 CoreText 绘制富文本，通过 CoreGraphics
+绘制图片、阴影、边框等</li>
+<li>最后将绘制完成得到的位图，回到主线程展示</li>
+</ul>
+<h2 id="coretext-工具类">CoreText 工具类</h2>
+<p>关于 CoreText 的结构图： <img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b3540a4be1b7d1fa7dc5.png/t6qPkf4aDEJ3SzH.png" />
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/cbf7d3ce0902742b3474.png/TDtzIo6BAir9SRf.png" /></p>
+<h3 id="yytextrundelegate">YYTextRunDelegate</h3>
+<p>富文本中为定制一段区域的大小，可以在富文本中插入 key 为
+<code>kCTRunDelegateAttributeName</code> 的
+<code>CTRunDelegateRef</code>
+实例。通过这种方式来预留空白，以用来填充图片，进行图文的混排。作者可能考虑到
+CFRunDelegateRef
+本身的使用会比较繁琐，为了简易使用，进行了封装。也就是这里的
+YYTextRunDelegate。</p>
+<p>内部实现的思路：</p>
+<ul>
+<li>通过 <code>CTRunDelegateCreate()</code> 创建一
+<code>CTRunDelegateRef</code></li>
+<li>通过 <code>__bridge_retained</code> 转移内存管理，持有一个
+<code>YYTextRunDelegate</code> 对象</li>
+</ul>
+<p>一些细节处理：</p>
+<ul>
+<li>内存管理问题。<code>CTRunDelegateRef</code> 实例持有
+<code>YYTextRunDelegate</code>，当 <code>CTRunDelegateRef</code>
+实例释放时，会调用 <code>DeallocCallback()</code>，将内存管理权限转移给
+<code>YYTextRunDelegate</code> 局部变量的 ARC。</li>
+<li><strong>CTRunDelegateCreate()</strong> 里做了 copy
+操作。这里是深拷贝，目的是为了创建一个副本，以保证配置数据的安全性，不会被篡改。</li>
+</ul>
+<h3 id="yytextline">YYTextLine</h3>
+<p>创建一个富文本，拿到 CTRunRef、CTLineRef 及一些结构数据（如
+ascent、descent）。</p>
+<h4 id="line-位置及大小的计算">line 位置及大小的计算</h4>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 不考虑竖排版</span></span><br><span class="line">_bounds = <span class="built_in">CGRectMake</span>(_position.x, _position.y - _ascent, _lineWidth, _ascent + _descent);</span><br><span class="line">_bounds.origin.x += _firstGlyphPos;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>**_position** 指 line 的 origin 点位于 context 上下文的坐标转换为
+UIKit 坐标系的值。</li>
+<li><code>_position.y - _ascent</code> 表示 y 起始位置</li>
+<li><code>_ascent + _descent</code> 表示 line 高度</li>
+<li><code>_firstGlyphPos</code> 表示第一个 run 相对 line 的偏移</li>
+</ul>
+<h4 id="找出占位-run">找出占位 run</h4>
+<p>基本原理是通过 <code>CTRunDelegateRef</code> 占位，再用
+<code>YYTextAttachment</code> 填充。当遍历 line 里的 run 时，若该 run
+内有 <code>YYTextAttachment</code>，说明是占位 run，计算这个 run
+的位置和大小，便于后面填充。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">runPosition.x += _position.x;</span><br><span class="line">runPosition.y = _position.y - runPosition.y;</span><br><span class="line">runTypoBounds = <span class="built_in">CGRectMake</span>(runPosition.x, runPosition.y - ascent, runWidth, ascent + descent);</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>runPosition</code> 表示相对 line 的 x/y 偏移量</li>
+<li>最后，缓存 <code>YYTextAttachment</code> 和 run 位置大小信息</li>
+</ul>
+<h3 id="yytextcontainer">YYTextContainer</h3>
+<p>CTFrameRef 需要通过 <strong>CTFramesetterCreateFrame()</strong>
+创建，该方法需要 <code>CGPathRef</code> 作为参数，作者封装了
+<code>YYTextContainer</code> 类来简化使用。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> Example:</span></span><br><span class="line"><span class="comment"> </span></span><br><span class="line"><span class="comment">     ┌─────────────────────────────┐  &lt;------- container</span></span><br><span class="line"><span class="comment">     │                             │</span></span><br><span class="line"><span class="comment">     │    asdfasdfasdfasdfasdfa   &lt;------------ container insets</span></span><br><span class="line"><span class="comment">     │    asdfasdfa   asdfasdfa    │</span></span><br><span class="line"><span class="comment">     │    asdfas         asdasd    │</span></span><br><span class="line"><span class="comment">     │    asdfa        &lt;----------------------- container exclusion path</span></span><br><span class="line"><span class="comment">     │    asdfas         adfasd    │</span></span><br><span class="line"><span class="comment">     │    asdfasdfa   asdfasdfa    │</span></span><br><span class="line"><span class="comment">     │    asdfasdfasdfasdfasdfa    │</span></span><br><span class="line"><span class="comment">     │                             │</span></span><br><span class="line"><span class="comment">     └─────────────────────────────┘</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<p>开发者可以通过 CGSize 来设定富文本大小，也可以通过 UIBezierPath
+定制路径。同时，CoreText 还支持镂空效果，通过 exclusionPaths 控制。</p>
+<h2 id="yytextlayout">YYTextLayout</h2>
+<p>包含了布局一富文本所有的信息，这个文件里也包含很多绘制相关的 C
+代码。YYTextLayout 负责计算各种数据，为后面的绘制做准备。</p>
+<p>核心计算方法： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">+ (YYTextLayout *)layoutWithContainer:(YYTextContainer *)container text:(<span class="built_in">NSAttributedString</span> *)text range:(<span class="built_in">NSRange</span>)range;</span><br></pre></td></tr></table></figure></p>
+<h3 id="计算绘制路径和路径的位置矩形">计算绘制路径和路径的位置矩形</h3>
+<p>基于 YYTextContainer 对象计算得到 CGPathRef。UIKit 转为 CoreText
+坐标，需要先进行坐标处理。得到 <code>pathBox</code>，pathBox
+是真正的绘制区域相对于绘制上下文的位置和大小。在后面计算 line 和 run
+位置时，都需要这里的 <code>cgPathBox.origin</code>。</p>
+<h3 id="初始化-ctframesetterref-和-ctframeref">初始化 CTFramesetterRef
+和 CTFrameRef</h3>
+<h3 id="计算-line-总-frame">计算 line 总 frame</h3>
+<ul>
+<li>前面 TextContainer 得到 <code>CTFrameRef</code></li>
+<li>接着遍历所有的 line，结合 <code>cgPathBox.origin</code> 计算得到每个
+line 的位置和大小</li>
+<li>最后将每个 line 的 rect 合并，得到包含所有 line 的最小位置矩形
+<code>textBoundingRect</code>。</li>
+</ul>
+<h3 id="计算-line-的行数">计算 line 的行数</h3>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/7a58bc3f6a122b31bb2b.png/4PrDjvsxtheB2JY.png" />
+在有排除路径的情况下，一行可能有多个 line。所以需要计算每个 line
+所在的行。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b23223b6bca5fee4e817.png/QhupfCHj2dWVDBI.png" />
+当 line 高度大于 lastline 高度时。若 lastline 的 baseline 在 line 的
+<strong>y0~y1</strong> 之间，说明未换行。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/2abb36cf39c2807606d7.png/AsBquM2NzxicHyD.png" />
+当 line 高度小于 lastline 高度时。若 line 的 baseline 在 lastline 的
+<strong>y0~y1</strong> 之间，说明未换行。</p>
+<p>确定了 line 的换行规则，可以计算得到 line 的行数。</p>
+<h3 id="获取行上下边界的数组">获取行上下边界的数组</h3>
+<p>上下边界结构体：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> &#123;</span><br><span class="line">    <span class="built_in">CGFloat</span> head;</span><br><span class="line">    <span class="built_in">CGFloat</span> foot;</span><br><span class="line">&#125; YYRowEdge;</span><br></pre></td></tr></table></figure>
+<p>YYRowEdge 表示每一行的上下边界。遍历所有 line，当当前 line 和 last
+line 为同一行时，取 line 和 last line 最大上下边界；当当前 line 和 last
+line 不同行时，取当前 line 的上下边界。</p>
+<p>结果如图示： <img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/69ce417926aca2205f6a.png/6MbvWlCkwo5p48L.png" /></p>
+<p>中间的间隙为行间距，YYText 将行间距进行了均分，如图示：</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/5c774bbbfd037cf8e4c2.png/u9tU4bMrEmYCXzV.png" /></p>
+<h3 id="计算绘制区域的总大小">计算绘制区域的总大小</h3>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/feaac3ecc6d318774d1f.png/7cnjGSNq46xm2Rd.png" /></p>
+<p>前面通过 <code>YYTextContainer</code> 计算得到绘制路径的位置矩形
+pathBox（上图蓝色区域）。但这是实际绘制区域的大小，但应用场景中还会有
+inset、borderWidth 之类的情况。所以实际业务需要的绘制区域会更大。</p>
+<h3 id="line-截断">line 截断</h3>
+<p>当富文本超过限制时，通常会看到文本最后有点省略号：<code>text...</code>。YYText
+支持自定义后缀，即 <code>truncationToken</code>。</p>
+<p>YYTextLine 总是在富文本最后，当 lastLineText 超出绘制范围，通过
+<code>CTLineCreateTruncatedLine(...)</code> 创建自动计算的截断
+line，会返回一个 <code>CTLineRef</code>，框架将其转化为
+<code>YYTextLine</code> 作为 YYTextLayout 的一个属性
+<code>truncatedLine</code>。</p>
+<h2 id="自定义富文本属性">自定义富文本属性</h2>
+<p>原理是遍历富文本，找到某个 run 是否包含自定义的
+key，接着做对应的绘制逻辑。</p>
+<h3 id="图文混排的实现">图文混排的实现</h3>
+<p>前面提到过，如果想要在富文本中添加 UIImage、UIView
+之类的附件，需要先设置一个占位符
+<code>CTRunDelegateRef</code>，具体看下占位的逻辑。</p>
+<h4 id="对齐方式">对齐方式</h4>
+<p>图文混排添加附件有三种对齐方式：居上对齐、居中对齐、局下对齐。通过
+ascent、descent、baseline 控制。</p>
+<ol type="1">
+<li>居上对齐</li>
+</ol>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/c77b89cab659beec5e82.png/OrcxWt1kuhi6KYU.png" /></p>
+<p>run 的 ascent 对齐文本的 ascent。</p>
+<ol start="2" type="1">
+<li>居下对齐</li>
+</ol>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/a21bd03b2e62334617e3.png/O7B5XUmNozHy6FY.png" /></p>
+<p>run 的 descent 对齐文本的 descent。若 run 太矮，则居上对齐文本的
+baseline。</p>
+<ol start="3" type="1">
+<li>居中对齐</li>
+</ol>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/16e3a2bbae069f8052f3.png/eQ5WIxaGZvYuglR.png" /></p>
+<p>居中相对会复杂些，run 的 center 和文本的 center 对齐。
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">center = (ascent + descent) / 2</span><br></pre></td></tr></table></figure></p>
+<p>若 run 太矮，则贴着 baseline。</p>
+<h4 id="绘制附件">绘制附件</h4>
+<p>绘制逻辑在 <strong>YYTextLayout</strong> 的
+<code>YYTextDrawAttachment(...)</code> 方法中。</p>
+<ol type="1">
+<li>若附件为 UIImage，会根据占位 run 的位置和大小，通过 CoreGraphics API
+绘制图片：</li>
+</ol>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">CGImageRef</span> ref = image.CGImage;</span><br><span class="line"><span class="keyword">if</span> (ref) &#123;</span><br><span class="line">    <span class="built_in">CGContextSaveGState</span>(context);</span><br><span class="line">    <span class="built_in">CGContextTranslateCTM</span>(context, <span class="number">0</span>, <span class="built_in">CGRectGetMaxY</span>(rect) + <span class="built_in">CGRectGetMinY</span>(rect));</span><br><span class="line">    <span class="built_in">CGContextScaleCTM</span>(context, <span class="number">1</span>, <span class="number">-1</span>);</span><br><span class="line">    <span class="built_in">CGContextDrawImage</span>(context, rect, ref);</span><br><span class="line">    <span class="built_in">CGContextRestoreGState</span>(context);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="2" type="1">
+<li>若附件为 UIView、CALayer，需要传入额外的
+superView、superLayer。再将绘制的 UIView、CALayer 添加到
+superView、superLayer。</li>
+</ol>
+<h3 id="点击高亮的实现">点击高亮的实现</h3>
+<p>YYTextHighlight 包含单击和长按的回调、及一些显示的属性配置。</p>
+<p>如 YYLabel 中的触发逻辑。先判断点击的 CGPoint
+对应的富文本位置，检测文本是否有对应的手势处理。若有对应的
+YYTextHighlight 处理，则更换 YYTextLine 为高亮
+YYTextLine，重绘。松手时，恢复 YYTextLine。</p>
+<p>简而言之，通过检测点击 CGPoint 是否有对应的手势处理，若有替换对应的
+YYTextLine，重新绘制。</p>
+<h2 id="总结">总结</h2>
+<p>本篇主要是对 YYText 中 CoreText 处理的原理做了梳理，从 CTFrameRef 到
+CTLineRef 到 CTRunRef。接着基于 line 和 run 做具体的展开，如：</p>
+<ul>
+<li>line 的行数确定</li>
+<li>line 的换行规则</li>
+<li>line 的截断</li>
+<li>run 的对齐</li>
+<li>富文本附件的添加原理</li>
+</ul>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2019/11/10/2019-11-10-ios-ipa/" title="iOS IPA 包体积优化">
+                    <div class="nextTitle">iOS IPA 包体积优化</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2019/09/14/2019-09-14-ios-analyse-llvm/" title="iOS 编译过程梳理">
+                    <div class="prevTitle">iOS 编译过程梳理</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1573056000000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A1%86%E6%9E%B6%E6%A6%82%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">框架概述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#coretext-%E5%B7%A5%E5%85%B7%E7%B1%BB"><span class="toc-number">2.</span> <span class="toc-text">CoreText 工具类</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#yytextrundelegate"><span class="toc-number">2.1.</span> <span class="toc-text">YYTextRunDelegate</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#yytextline"><span class="toc-number">2.2.</span> <span class="toc-text">YYTextLine</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#line-%E4%BD%8D%E7%BD%AE%E5%8F%8A%E5%A4%A7%E5%B0%8F%E7%9A%84%E8%AE%A1%E7%AE%97"><span class="toc-number">2.2.1.</span> <span class="toc-text">line 位置及大小的计算</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%89%BE%E5%87%BA%E5%8D%A0%E4%BD%8D-run"><span class="toc-number">2.2.2.</span> <span class="toc-text">找出占位 run</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#yytextcontainer"><span class="toc-number">2.3.</span> <span class="toc-text">YYTextContainer</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#yytextlayout"><span class="toc-number">3.</span> <span class="toc-text">YYTextLayout</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97%E7%BB%98%E5%88%B6%E8%B7%AF%E5%BE%84%E5%92%8C%E8%B7%AF%E5%BE%84%E7%9A%84%E4%BD%8D%E7%BD%AE%E7%9F%A9%E5%BD%A2"><span class="toc-number">3.1.</span> <span class="toc-text">计算绘制路径和路径的位置矩形</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-ctframesetterref-%E5%92%8C-ctframeref"><span class="toc-number">3.2.</span> <span class="toc-text">初始化 CTFramesetterRef
+和 CTFrameRef</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97-line-%E6%80%BB-frame"><span class="toc-number">3.3.</span> <span class="toc-text">计算 line 总 frame</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97-line-%E7%9A%84%E8%A1%8C%E6%95%B0"><span class="toc-number">3.4.</span> <span class="toc-text">计算 line 的行数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E8%A1%8C%E4%B8%8A%E4%B8%8B%E8%BE%B9%E7%95%8C%E7%9A%84%E6%95%B0%E7%BB%84"><span class="toc-number">3.5.</span> <span class="toc-text">获取行上下边界的数组</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97%E7%BB%98%E5%88%B6%E5%8C%BA%E5%9F%9F%E7%9A%84%E6%80%BB%E5%A4%A7%E5%B0%8F"><span class="toc-number">3.6.</span> <span class="toc-text">计算绘制区域的总大小</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#line-%E6%88%AA%E6%96%AD"><span class="toc-number">3.7.</span> <span class="toc-text">line 截断</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AF%8C%E6%96%87%E6%9C%AC%E5%B1%9E%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">自定义富文本属性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%BE%E6%96%87%E6%B7%B7%E6%8E%92%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">4.1.</span> <span class="toc-text">图文混排的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AF%B9%E9%BD%90%E6%96%B9%E5%BC%8F"><span class="toc-number">4.1.1.</span> <span class="toc-text">对齐方式</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BB%98%E5%88%B6%E9%99%84%E4%BB%B6"><span class="toc-number">4.1.2.</span> <span class="toc-text">绘制附件</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%82%B9%E5%87%BB%E9%AB%98%E4%BA%AE%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">4.2.</span> <span class="toc-text">点击高亮的实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>

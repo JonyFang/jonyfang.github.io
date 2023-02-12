@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="我们在使用多线程访问同一块资源时，常会面临数据安全的问题。为了能够保证每次只有一个线程在访问同一块资源，我们需要借助锁。本篇归类记录 iOS 常见的八种锁是什么及怎么样。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 中的锁">
+<meta property="og:url" content="http://example.com/2016/03/11/2016-03-11-ios-lock/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="我们在使用多线程访问同一块资源时，常会面临数据安全的问题。为了能够保证每次只有一个线程在访问同一块资源，我们需要借助锁。本篇归类记录 iOS 常见的八种锁是什么及怎么样。">
+<meta property="og:locale">
+<meta property="article:published_time" content="2016-03-10T16:00:00.000Z">
+<meta property="article:modified_time" content="2016-03-10T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="多线程">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>iOS 中的锁 · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">iOS 中的锁</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                iOS 中的锁
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS/多线程"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS/多线程
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="多线程">多线程</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">1.4k</span>阅读时长: <span class="post-count reading-time">6 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2016/03/11</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <p>我们在使用多线程访问同一块资源时，常会面临数据安全的问题。为了能够保证每次只有一个线程在访问同一块资源，我们需要借助锁。本篇归类记录
+iOS 常见的八种锁是什么及怎么样。</p>
+<span id="more"></span>
+<h2 id="自旋锁-互斥锁">自旋锁 &amp; 互斥锁</h2>
+<p><strong>互斥锁</strong>： -
+当上一个线程的任务没有执行完毕时（被锁住），在下一个线程来后会进入休眠状态等待任务执行完毕。在上一个线程的任务执行完毕，下一个线程才会自动唤醒并执行任务。
+- 所谓休眠，即在访问被锁定资源时，调用者线程会休眠，此时 CPU
+可以调度其他线程工作。知道被锁资源释放锁，此时自动唤醒休眠线程。</p>
+<p><strong>自旋锁</strong>： -
+区别于互斥锁，在上一个线程的任务没执行完毕时，下一个线程不会进入睡眠，而是进入忙等待状态（不断地循环检查锁是否可用）。当上一个线程任务执行完毕，下一个线程立即执行任务。
+-
+所谓忙等，即在访问被锁资源时，调用者线程不会休眠，而是不停循环检测，知道被锁资源释放锁。</p>
+<p><strong>优缺点对比</strong>： -
+自旋锁优点在于，自旋锁不会引起调用者休眠，所以不会进行线程调度、CPU
+时间片轮转等耗时操作。所以如果能在很短的时间内获得锁，自旋锁的效率会远高于互斥锁。
+- 自旋锁缺点在于，会一直占用
+CPU，在被访问资源未解锁时，会一直运转（自旋）占用
+CPU。如果不能在很短的时间内获得锁，会使 CPU
+效率降低。自旋锁<strong>不能实现递归调用</strong>。</p>
+<p>互斥锁： - <span class="citation"
+data-cites="synchronized">@synchronized</span> - NSLock - pthread_mutex
+- NSConditionLock - NSCondition - NSRecursiveLock</p>
+<p>自旋锁： - atomic - OSSPinLock - dispatch_semaphore_t</p>
+<h2 id="synchronized"><span class="citation"
+data-cites="synchronized">@synchronized</span></h2>
+<p><strong><span class="citation"
+data-cites="synchronized">@synchronized</span></strong>
+结构所做的事情和锁类似，它可以防止不同的线程同事执行同一段代码。相比较
+NSLock（后面再介绍），不需要创建锁对象、不需要加锁解锁，使用方便可读性强。</p>
+<p>先看一个 NSLock 的示例： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ThreadSafeQueue</span> : <span class="title">NSObject</span></span></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ThreadSafeQueue</span> </span>&#123;</span><br><span class="line">    <span class="built_in">NSMutableArray</span> *_elements;</span><br><span class="line">    <span class="built_in">NSLock</span> *_lock;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">    <span class="keyword">self</span> = [<span class="variable language_">super</span> init];</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">self</span>) &#123;</span><br><span class="line">        _elements = [<span class="built_in">NSMutableArray</span> array];</span><br><span class="line">        _lock = [[<span class="built_in">NSLock</span> alloc] init];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)push:(<span class="type">id</span>)element &#123;</span><br><span class="line">    [_lock lock];</span><br><span class="line">    [_elements addObject:element];</span><br><span class="line">    [_lock unlock];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>再看下用 <strong><span class="citation"
+data-cites="synchronized">@synchronized</span></strong> 结构的实现：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">ThreadSafeQueue</span> : <span class="title">NSObject</span></span></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ThreadSafeQueue</span> </span>&#123;</span><br><span class="line">    <span class="built_in">NSMutableArray</span> *_elements;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">    <span class="keyword">self</span> = [<span class="variable language_">super</span> init];</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">self</span>) &#123;</span><br><span class="line">        _elements = [<span class="built_in">NSMutableArray</span> array];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)push:(<span class="type">id</span>)element &#123;</span><br><span class="line">    <span class="comment">// 用 self 或 _elements 效果相同</span></span><br><span class="line">    <span class="keyword">@synchronized</span> (<span class="keyword">self</span>) &#123;</span><br><span class="line">        [_elements addObject:element];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="nslock">NSLock</h2>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/2834b1ecab37767a34b9.jpg/4gjJutKmRcidnWe.jpg" /></p>
+<ul>
+<li><strong>lock</strong></li>
+<li><strong>unlock</strong></li>
+<li><strong>trylock</strong>：尝试加锁，若成功 return YES，若失败 return
+NO</li>
+<li><strong>lockBeforeDate</strong>：在 Date 前尝试加锁，若成功 return
+YES，若失败 return NO</li>
+</ul>
+<p>示例： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSLock</span> *lock = [<span class="built_in">NSLock</span> new];</span><br><span class="line"><span class="comment">//线程1</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    [lock lock];</span><br><span class="line">    sleep(<span class="number">3</span>);</span><br><span class="line">    [lock unlock];</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">//线程2</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    <span class="type">BOOL</span> isLocked =  [lock lockBeforeDate:[<span class="built_in">NSDate</span> dateWithTimeIntervalSinceNow:<span class="number">4</span>]];</span><br><span class="line">    <span class="keyword">if</span> (isLocked) &#123;</span><br><span class="line">        [lock unlock];</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">//</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
+<h2 id="dispatch_semaphore-信号量">dispatch_semaphore 信号量</h2>
+<ul>
+<li><strong>dispatch_semaphore_create(1)</strong>：传入值必须
+<strong>&gt;= 0</strong>，若传入 0 会阻塞线程并等待
+timeout，时间到后再执行下面的语句。</li>
+<li><strong>dispatch_semaphore_wait(signal,
+overTime)</strong>：加锁，信号量 -1</li>
+<li><strong>dispatch_semaphore_signal(signal)</strong>：解锁，信号量
++1</li>
+</ul>
+<p>信号量的值可以拿停车位对比理解，信号量（车位）为 0
+时，需要等待，信号量（车位） &gt;0 时可以继续调度函数。</p>
+<p>示例： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">dispatch_semaphore_t signal = dispatch_semaphore_create(<span class="number">1</span>);</span><br><span class="line">dispatch_time_t overTime = dispatch_time(DISPATCH_TIME_NOW, <span class="number">3.0</span>f * <span class="built_in">NSEC_PER_SEC</span>);</span><br><span class="line"></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    dispatch_semaphore_wait(signal, overTime); <span class="comment">//signal 值 -1</span></span><br><span class="line">    dispatch_semaphore_signal(signal); <span class="comment">//signal 值 +1</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
+<h2 id="pthread_mutex">pthread_mutex</h2>
+<p>需要带入头文件 <strong>#import &lt;pthread.h&gt;</strong></p>
+<p>使用示例： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#import <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> pthread_mutex_t pLock;</span><br><span class="line">pthread_mutex_init(&amp;pLock, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//1. 线程 1</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    pthread_mutex_lock(&amp;pLock);</span><br><span class="line">    sleep(<span class="number">3</span>);</span><br><span class="line">    pthread_mutex_unlock(&amp;pLock);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">//2. 线程 2</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    <span class="keyword">if</span> (pthread_mutex_trylock(&amp;pLock)) &#123;</span><br><span class="line">        pthread_mutex_unlock(&amp;pLock);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
+<h2 id="nsconditionlock-条件锁">NSConditionLock 条件锁</h2>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/d7e4290e8d1975bfbe12.jpg/lg23H5wTnScZyVt.jpg" /></p>
+<p>NSConditionLock 可以实现任务之间的依赖。</p>
+<p>示例代码： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSConditionLock</span> *cLock = [[<span class="built_in">NSConditionLock</span> alloc] initWithCondition:<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程 1</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    <span class="keyword">if</span> ([cLock tryLockWhenCondition:<span class="number">0</span>]) &#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@&quot;OP1&quot;</span>);</span><br><span class="line">       [cLock unlockWithCondition:<span class="number">1</span>];</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         <span class="built_in">NSLog</span>(<span class="string">@&quot;PFILURE&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程 2</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    [cLock lockWhenCondition:<span class="number">3</span>];</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;OP2&quot;</span>);</span><br><span class="line">    [cLock unlockWithCondition:<span class="number">2</span>];</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程 3</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    [cLock lockWhenCondition:<span class="number">1</span>];</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;OP3&quot;</span>);</span><br><span class="line">    [cLock unlockWithCondition:<span class="number">3</span>];</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 打印结果</span></span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">26</span>:<span class="number">40.737312</span>+<span class="number">0800</span> Demo[<span class="number">8361</span>:<span class="number">6200252</span>] OP1</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">26</span>:<span class="number">40.737590</span>+<span class="number">0800</span> Demo[<span class="number">8361</span>:<span class="number">6200249</span>] OP3</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">26</span>:<span class="number">40.737880</span>+<span class="number">0800</span> Demo[<span class="number">8361</span>:<span class="number">6200253</span>] OP2</span><br></pre></td></tr></table></figure></p>
+<p>执行过程：<strong>0 -&gt; 1 -&gt; 3 -&gt; 2</strong>，所以说可以通过
+NSConditionLock 实现任务的依赖。</p>
+<h2 id="nscondition">NSCondition</h2>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/ba2e32cbda9bbc5b4c22.jpg/8AmXCiInDUSupPB.jpg" /></p>
+<ul>
+<li><strong>wait</strong>：进入等待状态</li>
+<li><strong>waitUntilDate</strong>：等待一定的时间</li>
+<li><strong>signal</strong>：唤醒一个等待的线程</li>
+<li><strong>broadcase</strong>：唤醒所有等待的线程</li>
+</ul>
+<h2 id="nsrecursivelock">NSRecursiveLock</h2>
+<p>递归锁可以被同一个线程多次请求，而不会引起死锁。主要用在循环和递归操作中。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b29d3ffaa7cdd7f359a4.jpg/hVTYano9jrl7K8P.jpg" /></p>
+<h2 id="osspinlock">OSSPinLock</h2>
+<p>使用 <strong>OSSpinLock</strong> 需要引入头文件： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#import <span class="string">&lt;libkern/OSAtomic.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">__block OSSpinLock oslock = OS_SPINLOCK_INIT;</span><br><span class="line"><span class="comment">//线程1</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程1 开始上锁&quot;</span>);</span><br><span class="line">    OSSpinLockLock(&amp;oslock);</span><br><span class="line">    sleep(<span class="number">4</span>);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程1&quot;</span>);</span><br><span class="line">    OSSpinLockUnlock(&amp;oslock);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程1 已解锁&quot;</span>);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;--------------------------------------------------------&quot;</span>);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">//线程2</span></span><br><span class="line"><span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程2 开始上锁&quot;</span>);</span><br><span class="line">    OSSpinLockLock(&amp;oslock);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程2&quot;</span>);</span><br><span class="line">    OSSpinLockUnlock(&amp;oslock);</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;线程2 已解锁&quot;</span>);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 打印日志</span></span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">03.879471</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213056</span>] 线程<span class="number">1</span> 开始上锁</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">03.879471</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213053</span>] 线程<span class="number">2</span> 开始上锁</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">03.879679</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213053</span>] 线程<span class="number">2</span></span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">03.879808</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213053</span>] 线程<span class="number">2</span> 已解锁</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">07.881847</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213056</span>] 线程<span class="number">1</span></span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">07.882197</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213056</span>] 线程<span class="number">1</span> 已解锁</span><br><span class="line"><span class="number">2016</span><span class="number">-03</span><span class="number">-11</span> <span class="number">15</span>:<span class="number">47</span>:<span class="number">07.882454</span>+<span class="number">0800</span> BuildDemo[<span class="number">8569</span>:<span class="number">6213056</span>] --------------------------------------------------------</span><br></pre></td></tr></table></figure></p>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2016/03/13/2016-03-13-objc-cetegory/" title="Category 实现原理">
+                    <div class="nextTitle">Category 实现原理</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2016/03/10/2016-03-10-ios-operation/" title="iOS 多线程 - NSOperation">
+                    <div class="prevTitle">iOS 多线程 - NSOperation</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1457625600000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%87%AA%E6%97%8B%E9%94%81-%E4%BA%92%E6%96%A5%E9%94%81"><span class="toc-number">1.</span> <span class="toc-text">自旋锁 &amp; 互斥锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#synchronized"><span class="toc-number">2.</span> <span class="toc-text">@synchronized</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nslock"><span class="toc-number">3.</span> <span class="toc-text">NSLock</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#dispatch_semaphore-%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="toc-number">4.</span> <span class="toc-text">dispatch_semaphore 信号量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pthread_mutex"><span class="toc-number">5.</span> <span class="toc-text">pthread_mutex</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nsconditionlock-%E6%9D%A1%E4%BB%B6%E9%94%81"><span class="toc-number">6.</span> <span class="toc-text">NSConditionLock 条件锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nscondition"><span class="toc-number">7.</span> <span class="toc-text">NSCondition</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nsrecursivelock"><span class="toc-number">8.</span> <span class="toc-text">NSRecursiveLock</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#osspinlock"><span class="toc-number">9.</span> <span class="toc-text">OSSPinLock</span></a></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>

@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="本篇是对 YYCache 源码阅读过程中的梳理。YYCache 是一个线程安全的高性能 Key-Value 缓存框架。代码质量很高，值得拿来学习。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YYCache 源码梳理">
+<meta property="og:url" content="http://example.com/2017/10/01/2017-10-01-yycache/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="本篇是对 YYCache 源码阅读过程中的梳理。YYCache 是一个线程安全的高性能 Key-Value 缓存框架。代码质量很高，值得拿来学习。">
+<meta property="og:locale">
+<meta property="article:published_time" content="2017-09-30T16:00:00.000Z">
+<meta property="article:modified_time" content="2017-09-30T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="源码阅读">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>YYCache 源码梳理 · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">YYCache 源码梳理</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                YYCache 源码梳理
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS/源码阅读"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS/源码阅读
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="源码阅读">源码阅读</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">7.3k</span>阅读时长: <span class="post-count reading-time">35 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2017/10/01</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <p>本篇是对 <a href="https://github.com/ibireme/YYCache">YYCache</a>
+源码阅读过程中的梳理。YYCache 是一个线程安全的高性能
+<strong>Key-Value</strong> 缓存框架。代码质量很高，值得拿来学习。</p>
+<span id="more"></span>
+<h2 id="yycache-的框架结构">YYCache 的框架结构</h2>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/cb8ec6ffccc8e04e67e4.jpg/Obih8ZBfWxAgIDR.jpg" /></p>
+<p>如上是 YYCache 的框架结构图，本篇按照下面的分类来进行梳理：</p>
+<ul>
+<li>YYCache</li>
+<li>YYMemoryCache</li>
+<li>YYDiskCache</li>
+<li>NSMapTable</li>
+<li>如何保证的线程安全</li>
+</ul>
+<h2 id="yycache">YYCache</h2>
+<p><strong>YYCache.h</strong> 做一个简化：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYCache</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">copy</span>, <span class="keyword">readonly</span>) <span class="built_in">NSString</span> *name; <span class="comment">//缓存名</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">strong</span>, <span class="keyword">readonly</span>) YYMemoryCache *memoryCache;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">strong</span>, <span class="keyword">readonly</span>) YYDiskCache *diskCache;</span><br><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line">- (<span class="type">BOOL</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="built_in">NSString</span> *key, <span class="type">BOOL</span> contains))block;</span><br><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line">- (<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)objectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)objectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="built_in">NSString</span> *key, <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt; object))block;</span><br><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="built_in">NSString</span> *key))block;</span><br><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line">- (<span class="type">void</span>)removeAllObjects;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithProgressBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">int</span> removedCount, <span class="type">int</span> totalCount))progress</span><br><span class="line">                                 endBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">BOOL</span> error))end;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>接口内容包含了缓存框架所需要的增删改查，函数的命名很清晰，不一一注释了。</p>
+<h3 id="接口实现">接口实现</h3>
+<p>从接口文件可以看到，YYCache 内的增删改查都提供了有无 Block
+回调的两种方式。以有 Block 回调来看下，增删改查的实现。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span> (^)(<span class="built_in">NSString</span> *key, <span class="type">BOOL</span> contains))block &#123;</span><br><span class="line">    <span class="keyword">if</span> (!block) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> ([_memoryCache containsObjectForKey:key]) &#123;</span><br><span class="line">        <span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">            block(key, <span class="literal">YES</span>);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125; <span class="keyword">else</span>  &#123;</span><br><span class="line">        [_diskCache containsObjectForKey:key withBlock:block];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)objectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span> (^)(<span class="built_in">NSString</span> *key, <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt; object))block &#123;</span><br><span class="line">    <span class="keyword">if</span> (!block) <span class="keyword">return</span>;</span><br><span class="line">    <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt; object = [_memoryCache objectForKey:key];</span><br><span class="line">    <span class="keyword">if</span> (object) &#123;</span><br><span class="line">        <span class="built_in">dispatch_async</span>(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, <span class="number">0</span>), ^&#123;</span><br><span class="line">            block(key, object);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        [_diskCache objectForKey:key withBlock:^(<span class="built_in">NSString</span> *key, <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt; object) &#123;</span><br><span class="line">            <span class="keyword">if</span> (object &amp;&amp; ![_memoryCache objectForKey:key]) &#123;</span><br><span class="line">                [_memoryCache setObject:object forKey:key];</span><br><span class="line">            &#125;</span><br><span class="line">            block(key, object);</span><br><span class="line">        &#125;];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span> (^)(<span class="type">void</span>))block &#123;</span><br><span class="line">    [_memoryCache setObject:object forKey:key];</span><br><span class="line">    [_diskCache setObject:object forKey:key withBlock:block];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span> (^)(<span class="built_in">NSString</span> *key))block &#123;</span><br><span class="line">    [_memoryCache removeObjectForKey:key];</span><br><span class="line">    [_diskCache removeObjectForKey:key withBlock:block];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block &#123;</span><br><span class="line">    [_memoryCache removeAllObjects];</span><br><span class="line">    [_diskCache removeAllObjectsWithBlock:block];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithProgressBlock:(<span class="type">void</span>(^)(<span class="type">int</span> removedCount, <span class="type">int</span> totalCount))progress</span><br><span class="line">                                 endBlock:(<span class="type">void</span>(^)(<span class="type">BOOL</span> error))end &#123;</span><br><span class="line">    [_memoryCache removeAllObjects];</span><br><span class="line">    [_diskCache removeAllObjectsWithProgressBlock:progress endBlock:end];</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如上实现可以看到：</p>
+<ul>
+<li>YYCache
+每次的增删改查操作都是优先操作**_memoryCache<strong>，再操作</strong>_diskCache**。</li>
+<li>关于回调：
+<ul>
+<li><code>-containsObjectForKey:withBlock:</code> 与
+<code>-objectForKey:withBlock:</code> 优先以 **_memoryCache**
+的返回数据回调。</li>
+<li>其他方法，以 **_diskCache** 的回调为准。</li>
+</ul></li>
+</ul>
+<p>到这里我们已经知道，YYCache 有哪些对数据项的操作接口；也可以看出在
+YYCache 这一层实际上并没有自身去处理数据，而是借助于 **_memoryCache** 和
+**_diskCache**。</p>
+<p>依次来看下他们是如何操作数据的。</p>
+<h2 id="lru">LRU</h2>
+<p>前面提到 YYCache 对数据的操作借助于 **_memoryCache** 和
+**_diskCache**。这里延伸出一个问题：为什么缓存设计框架，需要同时存在内存缓存和磁盘缓存呢？</p>
+<p>对于数据有个<strong>命中率</strong>的概念。所谓命中率，即：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">命中率 = 命中数 / (命中数 + 未命中数)</span><br></pre></td></tr></table></figure>
+<p>命中率是判断一个缓存框架加速效果好坏的重要标准之一。对于缓存框架为什么分<strong>内存缓存</strong>与<strong>磁盘缓存</strong>，自己的理解是，<strong>命中数</strong>代表拿到了数据，<strong>未命中数据</strong>代表没拿到数据；而拿到数据的过程也分快和满，我们知道的是读取内存缓存会比磁盘缓存快很多。借助于这一点，在保证数据命中率的前提下，如果能够尽量使用内存缓存进行操作，是一个很好的提速方案。</p>
+<p>当然，随着自我发问，这里也引出了另一个问题：</p>
+<ul>
+<li>内存是有限的，怎样在合适的时机将数据放到内存？</li>
+</ul>
+<p>YYCache 内部使用了 LRU 来达到这个目的。我们来看下 LRU 的源码实现，以
+YYMemoryCache 内实现为例。</p>
+<p>YYMemoryCache
+是通过一个<strong>链表节点类</strong>（<code>_YYLinkedMapNode</code>）来保存某个单独的内存缓存；再通过一个<strong>双向链表类</strong>（<code>_YYLinkedMap</code>）来保存和管理这些链表节点。依次看下它们的源码接口的结构：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">_YYLinkedMapNode</span> : <span class="title">NSObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">@package</span></span><br><span class="line">    __<span class="keyword">unsafe_unretained</span> _YYLinkedMapNode *_prev; <span class="comment">// retained by dic</span></span><br><span class="line">    __<span class="keyword">unsafe_unretained</span> _YYLinkedMapNode *_next; <span class="comment">// retained by dic</span></span><br><span class="line">    <span class="type">id</span> _key; <span class="comment">// 缓存 key</span></span><br><span class="line">    <span class="type">id</span> _value; <span class="comment">// 缓存内容</span></span><br><span class="line">    <span class="built_in">NSUInteger</span> _cost; <span class="comment">// 缓存消耗</span></span><br><span class="line">    <span class="built_in">NSTimeInterval</span> _time; <span class="comment">// 上次访问时间</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">_YYLinkedMapNode</span></span></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">_YYLinkedMap</span> : <span class="title">NSObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">@package</span></span><br><span class="line">    <span class="built_in">CFMutableDictionaryRef</span> _dic; <span class="comment">// 存放节点（_YYLinkedMapNode）</span></span><br><span class="line">    <span class="built_in">NSUInteger</span> _totalCost; <span class="comment">// 总消耗</span></span><br><span class="line">    <span class="built_in">NSUInteger</span> _totalCount; <span class="comment">// 节点总数</span></span><br><span class="line">    _YYLinkedMapNode *_head; <span class="comment">// 链表头节点</span></span><br><span class="line">    _YYLinkedMapNode *_tail; <span class="comment">// 链表尾节点</span></span><br><span class="line">    <span class="type">BOOL</span> _releaseOnMainThread; <span class="comment">// 是否主线程释放，默认 NO</span></span><br><span class="line">    <span class="type">BOOL</span> _releaseAsynchronously; <span class="comment">// 是否异步释放，默认 YES</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)insertNodeAtHead:(_YYLinkedMapNode *)node;</span><br><span class="line">- (<span class="type">void</span>)bringNodeToHead:(_YYLinkedMapNode *)node;</span><br><span class="line">- (<span class="type">void</span>)removeNode:(_YYLinkedMapNode *)node;</span><br><span class="line">- (_YYLinkedMapNode *)removeTailNode;</span><br><span class="line">- (<span class="type">void</span>)removeAll;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">_YYLinkedMap</span></span></span><br><span class="line"><span class="comment">// 方法实现省略...</span></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>从分析 LRU 实现角度出发，核心的几个属性分别为：</p>
+<ul>
+<li><code>_YYLinkedMapNode</code>
+<ul>
+<li><code>_prev</code>：前指针</li>
+<li><code>_next</code>：后指针</li>
+</ul></li>
+<li><code>_YYLinkedMap</code>
+<ul>
+<li><code>_dic</code>：存放节点</li>
+<li><code>_head</code>：头节点</li>
+<li><code>_tail</code>：尾节点</li>
+</ul></li>
+</ul>
+<p>带着这些属性，看下具体的源码对双向链表 LRU 的实现过程。</p>
+<h3 id="insertnodeathead">insertNodeAtHead:</h3>
+<p>将节点插入为头节点。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)insertNodeAtHead:(_YYLinkedMapNode *)node &#123;</span><br><span class="line">	<span class="comment">// 将 node 的 key-value 存入 Map 的 _dic</span></span><br><span class="line">    <span class="built_in">CFDictionarySetValue</span>(_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(node-&gt;_key), (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(node));</span><br><span class="line">    _totalCost += node-&gt;_cost;</span><br><span class="line">    _totalCount++;</span><br><span class="line">    <span class="keyword">if</span> (_head) &#123;</span><br><span class="line">        node-&gt;_next = _head;</span><br><span class="line">        _head-&gt;_prev = node;</span><br><span class="line">        _head = node;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        _head = _tail = node;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述： - 将 node 的 key-value 存入**_YYLinkedMap**的
+<code>_dic</code>。 - 更新 <code>_totalCost</code> 和
+<code>_totalCount</code>。 - 若 map 中有 <code>_head</code>，将 node
+插到 headNode，并更新 <code>_head</code> - 若 map 中无
+<code>_head</code>，初始化 <code>_head</code>、<code>_tail</code> 为
+node</p>
+<h3 id="bringnodetohead">bringNodeToHead:</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)bringNodeToHead:(_YYLinkedMapNode *)node &#123;</span><br><span class="line">    <span class="keyword">if</span> (_head == node) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (_tail == node) &#123;</span><br><span class="line">        _tail = node-&gt;_prev;</span><br><span class="line">        _tail-&gt;_next = <span class="literal">nil</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        node-&gt;_next-&gt;_prev = node-&gt;_prev;</span><br><span class="line">        node-&gt;_prev-&gt;_next = node-&gt;_next;</span><br><span class="line">    &#125;</span><br><span class="line">    node-&gt;_next = _head;</span><br><span class="line">    node-&gt;_prev = <span class="literal">nil</span>;</span><br><span class="line">    _head-&gt;_prev = node;</span><br><span class="line">    _head = node;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述：</p>
+<ul>
+<li>若已经是 <code>_head</code>，return</li>
+<li>若 node 为 <code>_tail</code>，更新 <code>_tail</code> 为 node
+前节点。将 node 放入当前头节点前，并修改 <code>_head</code></li>
+<li>若 node 不为 <code>_tail</code>，更新 node 前后节点的
+<code>_next</code> 和 <code>_prev</code>（可以理解为先删除 node）。将
+node 放入当前头节点前，并修改 <code>_head</code>。</li>
+</ul>
+<h3 id="removenode">removeNode:</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)removeNode:(_YYLinkedMapNode *)node &#123;</span><br><span class="line">	<span class="comment">// 在 _dic 中移除 node 对应的 key-value</span></span><br><span class="line">    <span class="built_in">CFDictionaryRemoveValue</span>(_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(node-&gt;_key));</span><br><span class="line">    _totalCost -= node-&gt;_cost;</span><br><span class="line">    _totalCount--;</span><br><span class="line">    <span class="keyword">if</span> (node-&gt;_next) node-&gt;_next-&gt;_prev = node-&gt;_prev;</span><br><span class="line">    <span class="keyword">if</span> (node-&gt;_prev) node-&gt;_prev-&gt;_next = node-&gt;_next;</span><br><span class="line">    <span class="keyword">if</span> (_head == node) _head = node-&gt;_next;</span><br><span class="line">    <span class="keyword">if</span> (_tail == node) _tail = node-&gt;_prev;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述： - 从 Map 的 <code>_dic</code> 中移除 node 对应的 key-value
+- 更新 <code>_totalCost</code>、<code>_totalCount</code> - 更新 node
+后前节点的指针，需判断是否有 <code>_next</code> 和 <code>_prev</code> -
+若 node 为 <code>_head</code>，更新 <code>_head</code> - 若 node 为
+<code>_tail</code>，更新 <code>_tail</code></p>
+<h3 id="removetailnode">removeTailNode:</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">- (_YYLinkedMapNode *)removeTailNode &#123;</span><br><span class="line">    <span class="keyword">if</span> (!_tail) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    <span class="comment">// 取出 _tail，并从 map 的 _dic 中移除 key-value</span></span><br><span class="line">    _YYLinkedMapNode *tail = _tail;</span><br><span class="line">    <span class="built_in">CFDictionaryRemoveValue</span>(_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(_tail-&gt;_key));</span><br><span class="line">    _totalCost -= _tail-&gt;_cost;</span><br><span class="line">    _totalCount--;</span><br><span class="line">    <span class="keyword">if</span> (_head == _tail) &#123;</span><br><span class="line">        _head = _tail = <span class="literal">nil</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        _tail = _tail-&gt;_prev;</span><br><span class="line">        _tail-&gt;_next = <span class="literal">nil</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> tail;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述： - 根据 Map 的 <code>_tail</code> 取出尾节点 node，并从
+<code>_dic</code> 中移除 key-value - 更新
+<code>_totalCost</code>、<code>_totalCount</code> -
+若链表只有一个节点（<code>_head</code> == <code>_tail</code>），置空
+<code>_head</code> 和 <code>_tail</code> - 否则更新 <code>_tail</code> -
+返回被移除的尾节点 node</p>
+<h3 id="removeall">removeAll:</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)removeAll &#123;</span><br><span class="line">    _totalCost = <span class="number">0</span>;</span><br><span class="line">    _totalCount = <span class="number">0</span>;</span><br><span class="line">    _head = <span class="literal">nil</span>;</span><br><span class="line">    _tail = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">CFDictionaryGetCount</span>(_dic) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">CFMutableDictionaryRef</span> holder = _dic;</span><br><span class="line">        _dic = <span class="built_in">CFDictionaryCreateMutable</span>(<span class="built_in">CFAllocatorGetDefault</span>(), <span class="number">0</span>, &amp;kCFTypeDictionaryKeyCallBacks, &amp;kCFTypeDictionaryValueCallBacks);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (_releaseAsynchronously) &#123;</span><br><span class="line">            <span class="built_in">dispatch_queue_t</span> queue = _releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">            <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">                <span class="built_in">CFRelease</span>(holder); <span class="comment">// hold and release in specified queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_releaseOnMainThread &amp;&amp; !pthread_main_np()) &#123;</span><br><span class="line">            <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;</span><br><span class="line">                <span class="built_in">CFRelease</span>(holder); <span class="comment">// hold and release in specified queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="built_in">CFRelease</span>(holder);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述： - 重置
+<code>_totalCost</code>、<code>_totalCount</code>、<code>_head</code>、<code>_tail</code>
+- 判断是否 <code>_dic</code> 是否有内容，有则继续 - 若异步释放
+<code>_dic</code>，再判断是否主线程释放： - 主线程释放 -
+<code>YYMemoryCacheGetReleaseQueue()</code> 释放 -
+若主线程释放，判断当前是否在主线程： - 不在主线程，放到主线程释放 -
+在主线程，直接释放</p>
+<h3 id="lru-小结">LRU 小结</h3>
+<p>到这里，我们已经完成了针对 node
+增删改查的所有操作。在每次的操作过程中，都会根据需要修改链表中的节点和指针。这些也是实现
+LRU 的基础。YYCache 中 LRU 的实现依赖于这里的双向链表。</p>
+<h2 id="yymemorycache">YYMemoryCache</h2>
+<p>简化后的 <code>YYMemoryCache.h</code></p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYMemoryCache</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) <span class="built_in">NSUInteger</span> totalCount;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) <span class="built_in">NSUInteger</span> totalCost;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSUInteger</span> countLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSUInteger</span> costLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSTimeInterval</span> ageLimit;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSTimeInterval</span> autoTrimInterval;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> <span class="type">BOOL</span> shouldRemoveAllObjectsOnMemoryWarning;</span><br><span class="line"><span class="keyword">@property</span> <span class="type">BOOL</span> shouldRemoveAllObjectsWhenEnteringBackground;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="type">void</span>(^didReceiveMemoryWarningBlock)(YYMemoryCache *cache);</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="type">void</span>(^didEnterBackgroundBlock)(YYMemoryCache *cache);</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> <span class="type">BOOL</span> releaseOnMainThread;</span><br><span class="line"><span class="keyword">@property</span> <span class="type">BOOL</span> releaseAsynchronously;</span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)containsObjectForKey:(<span class="type">id</span>)key;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">nullable</span> <span class="type">id</span>)objectForKey:(<span class="type">id</span>)key;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>)object forKey:(<span class="type">id</span>)key;</span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>)object forKey:(<span class="type">id</span>)key withCost:(<span class="built_in">NSUInteger</span>)cost;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="type">id</span>)key;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjects;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Trim</span></span><br><span class="line">- (<span class="type">void</span>)trimToCount:(<span class="built_in">NSUInteger</span>)count;</span><br><span class="line">- (<span class="type">void</span>)trimToCost:(<span class="built_in">NSUInteger</span>)cost;</span><br><span class="line">- (<span class="type">void</span>)trimToAge:(<span class="built_in">NSTimeInterval</span>)age;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>顾名思义的接口，看的很舒服，不需要额外的注释。对应看下实现文件的源码实现。</p>
+<h3 id="初始化">初始化</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">    <span class="keyword">self</span> = <span class="variable language_">super</span>.init;</span><br><span class="line">    pthread_mutex_init(&amp;_lock, <span class="literal">NULL</span>);</span><br><span class="line">    _lru = [_YYLinkedMap new];</span><br><span class="line">    _queue = dispatch_queue_create(<span class="string">&quot;com.ibireme.cache.memory&quot;</span>, DISPATCH_QUEUE_SERIAL);</span><br><span class="line">    </span><br><span class="line">    _countLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _costLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _ageLimit = DBL_MAX;</span><br><span class="line">    _autoTrimInterval = <span class="number">5.0</span>;</span><br><span class="line">    _shouldRemoveAllObjectsOnMemoryWarning = <span class="literal">YES</span>;</span><br><span class="line">    _shouldRemoveAllObjectsWhenEnteringBackground = <span class="literal">YES</span>;</span><br><span class="line">    </span><br><span class="line">    [[<span class="built_in">NSNotificationCenter</span> defaultCenter] addObserver:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(_appDidReceiveMemoryWarningNotification) name:<span class="built_in">UIApplicationDidReceiveMemoryWarningNotification</span> object:<span class="literal">nil</span>];</span><br><span class="line">    [[<span class="built_in">NSNotificationCenter</span> defaultCenter] addObserver:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(_appDidEnterBackgroundNotification) name:<span class="built_in">UIApplicationDidEnterBackgroundNotification</span> object:<span class="literal">nil</span>];</span><br><span class="line">    </span><br><span class="line">    [<span class="keyword">self</span> _trimRecursively];</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中 <code>_lru</code> 是 YYMemoryCache 与 <code>_YYLinkedMap</code>
+的一个联系点，所有的增删改查操作，都需要通过 <code>_lru</code>
+来实现。</p>
+<p>除此之外，我们看到了一些属性的默认值，如： - 不限制
+<code>_countLimit</code>、<code>_costLimit</code>、<code>_ageLimit</code>
+- <code>_autoTrimInterval</code> 自动清理时间为 5 s -
+默认内存警告时，清空内存缓存 - 默认进入后台时，清空内存缓存 -
+开启自动清理，后面再细说清理过程</p>
+<h3 id="增删改查的接口实现">增删改查的接口实现</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">id</span>)objectForKey:(<span class="type">id</span>)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    _YYLinkedMapNode *node = <span class="built_in">CFDictionaryGetValue</span>(_lru-&gt;_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(key));</span><br><span class="line">    <span class="keyword">if</span> (node) &#123;</span><br><span class="line">        node-&gt;_time = <span class="built_in">CACurrentMediaTime</span>();</span><br><span class="line">        [_lru bringNodeToHead:node];</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">    <span class="keyword">return</span> node ? node-&gt;_value : <span class="literal">nil</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="type">id</span>)object forKey:(<span class="type">id</span>)key &#123;</span><br><span class="line">    [<span class="keyword">self</span> setObject:object forKey:key withCost:<span class="number">0</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="type">id</span>)object forKey:(<span class="type">id</span>)key withCost:(<span class="built_in">NSUInteger</span>)cost &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">if</span> (!object) &#123;</span><br><span class="line">        [<span class="keyword">self</span> removeObjectForKey:key];</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    _YYLinkedMapNode *node = <span class="built_in">CFDictionaryGetValue</span>(_lru-&gt;_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(key));</span><br><span class="line">    <span class="built_in">NSTimeInterval</span> now = <span class="built_in">CACurrentMediaTime</span>();</span><br><span class="line">    <span class="keyword">if</span> (node) &#123;</span><br><span class="line">        _lru-&gt;_totalCost -= node-&gt;_cost;</span><br><span class="line">        _lru-&gt;_totalCost += cost;</span><br><span class="line">        node-&gt;_cost = cost;</span><br><span class="line">        node-&gt;_time = now;</span><br><span class="line">        node-&gt;_value = object;</span><br><span class="line">        [_lru bringNodeToHead:node];</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        node = [_YYLinkedMapNode new];</span><br><span class="line">        node-&gt;_cost = cost;</span><br><span class="line">        node-&gt;_time = now;</span><br><span class="line">        node-&gt;_key = key;</span><br><span class="line">        node-&gt;_value = object;</span><br><span class="line">        [_lru insertNodeAtHead:node];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (_lru-&gt;_totalCost &gt; _costLimit) &#123;</span><br><span class="line">        <span class="built_in">dispatch_async</span>(_queue, ^&#123;</span><br><span class="line">            [<span class="keyword">self</span> trimToCost:_costLimit];</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (_lru-&gt;_totalCount &gt; _countLimit) &#123;</span><br><span class="line">        _YYLinkedMapNode *node = [_lru removeTailNode];</span><br><span class="line">        <span class="keyword">if</span> (_lru-&gt;_releaseAsynchronously) &#123;</span><br><span class="line">            <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">            <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">                [node <span class="keyword">class</span>]; <span class="comment">//hold and release in queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_lru-&gt;_releaseOnMainThread &amp;&amp; !pthread_main_np()) &#123;</span><br><span class="line">            <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;</span><br><span class="line">                [node <span class="keyword">class</span>]; <span class="comment">//hold and release in queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="type">id</span>)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span>;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    _YYLinkedMapNode *node = <span class="built_in">CFDictionaryGetValue</span>(_lru-&gt;_dic, (__bridge <span class="keyword">const</span> <span class="type">void</span> *)(key));</span><br><span class="line">    <span class="keyword">if</span> (node) &#123;</span><br><span class="line">        [_lru removeNode:node];</span><br><span class="line">        <span class="keyword">if</span> (_lru-&gt;_releaseAsynchronously) &#123;</span><br><span class="line">            <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">            <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">                [node <span class="keyword">class</span>]; <span class="comment">//hold and release in queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_lru-&gt;_releaseOnMainThread &amp;&amp; !pthread_main_np()) &#123;</span><br><span class="line">            <span class="built_in">dispatch_async</span>(dispatch_get_main_queue(), ^&#123;</span><br><span class="line">                [node <span class="keyword">class</span>]; <span class="comment">//hold and release in queue</span></span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeAllObjects &#123;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    [_lru removeAll];</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>需要知道的几个点： - 我们把增删改查统一称为访问数据 -
+在每次的访问数据开始前，加锁
+<code>pthread_mutex_lock(&amp;_lock);</code> -
+每次访问数据（增、改）时，会更新 <code>_time</code> -
+在每次的访问数据结束后，解锁
+<code>pthread_mutex_unlock(&amp;_lock);</code></p>
+<p>关于锁的内容，放到后面和 YYDiskCache 一起对比分析。</p>
+<h3 id="缓存清理策略">缓存清理策略</h3>
+<p>我们从 **_YYLinkedMapNode** 的头文件结构可以知道，每份缓存 node
+都带有2个属性： - **NSUInteger _cost;<strong>：内存消耗 -
+</strong>NSTimeInterval _time;**：最新访问时间</p>
+<p>从 **_YYLinkedMap** 的头文件结构中可以知道，缓存 map 带有的2个属性：
+- **NSUInteger _totalCost;<strong>：总缓存消耗 - </strong>NSUInteger
+_totalCount;**：总缓存数</p>
+<p>再从 <strong>YYMemoryCache</strong> 的头文件中，知道了三个参数： -
+<strong>NSUInteger countLimit</strong>：缓存数量上限值 -
+<strong>NSUInteger costLimit</strong>：缓存消耗上限值 -
+<strong>NSTimeInterval
+ageLimit</strong>：缓存访问时间距离现在最久允许值</p>
+<p>由这些维护，我们大概知道了缓存清理策略的过程，及清理依据。具体看下代码实现：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)_trimRecursively &#123;</span><br><span class="line">    __<span class="keyword">weak</span> <span class="keyword">typeof</span>(<span class="keyword">self</span>) _<span class="keyword">self</span> = <span class="keyword">self</span>;</span><br><span class="line">    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(_autoTrimInterval * <span class="built_in">NSEC_PER_SEC</span>)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, <span class="number">0</span>), ^&#123;</span><br><span class="line">        __<span class="keyword">strong</span> <span class="keyword">typeof</span>(_<span class="keyword">self</span>) <span class="keyword">self</span> = _<span class="keyword">self</span>;</span><br><span class="line">        <span class="keyword">if</span> (!<span class="keyword">self</span>) <span class="keyword">return</span>;</span><br><span class="line">        [<span class="keyword">self</span> _trimInBackground];</span><br><span class="line">        [<span class="keyword">self</span> _trimRecursively];</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)_trimInBackground &#123;</span><br><span class="line">    <span class="built_in">dispatch_async</span>(_queue, ^&#123;</span><br><span class="line">        [<span class="keyword">self</span> _trimToCost:<span class="keyword">self</span>-&gt;_costLimit];</span><br><span class="line">        [<span class="keyword">self</span> _trimToCount:<span class="keyword">self</span>-&gt;_countLimit];</span><br><span class="line">        [<span class="keyword">self</span> _trimToAge:<span class="keyword">self</span>-&gt;_ageLimit];</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述： - **_trimRecursively<strong>： - 初始化 YYMemoryCache
+后即开始递归调用 - <code>_autoTrimInterval</code> 自动清理时间默认为 5s
+- </strong>_trimInBackground**： - 根据 cost、count、age
+三个维度清理缓存</p>
+<p>清理过程实现代码：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)_trimToCost:(<span class="built_in">NSUInteger</span>)costLimit &#123;</span><br><span class="line">    <span class="type">BOOL</span> finish = <span class="literal">NO</span>;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (costLimit == <span class="number">0</span>) &#123;</span><br><span class="line">        [_lru removeAll];</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_lru-&gt;_totalCost &lt;= costLimit) &#123;</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (finish) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">NSMutableArray</span> *holder = [<span class="built_in">NSMutableArray</span> new];</span><br><span class="line">    <span class="keyword">while</span> (!finish) &#123;</span><br><span class="line">        <span class="keyword">if</span> (pthread_mutex_trylock(&amp;_lock) == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (_lru-&gt;_totalCost &gt; costLimit) &#123;</span><br><span class="line">                _YYLinkedMapNode *node = [_lru removeTailNode];</span><br><span class="line">                <span class="keyword">if</span> (node) [holder addObject:node];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                finish = <span class="literal">YES</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            usleep(<span class="number">10</span> * <span class="number">1000</span>); <span class="comment">//10 ms</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (holder.count) &#123;</span><br><span class="line">        <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">        <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">            [holder count]; <span class="comment">// release in queue</span></span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)_trimToCount:(<span class="built_in">NSUInteger</span>)countLimit &#123;</span><br><span class="line">    <span class="type">BOOL</span> finish = <span class="literal">NO</span>;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (countLimit == <span class="number">0</span>) &#123;</span><br><span class="line">        [_lru removeAll];</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_lru-&gt;_totalCount &lt;= countLimit) &#123;</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (finish) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">NSMutableArray</span> *holder = [<span class="built_in">NSMutableArray</span> new];</span><br><span class="line">    <span class="keyword">while</span> (!finish) &#123;</span><br><span class="line">        <span class="keyword">if</span> (pthread_mutex_trylock(&amp;_lock) == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (_lru-&gt;_totalCount &gt; countLimit) &#123;</span><br><span class="line">                _YYLinkedMapNode *node = [_lru removeTailNode];</span><br><span class="line">                <span class="keyword">if</span> (node) [holder addObject:node];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                finish = <span class="literal">YES</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            usleep(<span class="number">10</span> * <span class="number">1000</span>); <span class="comment">//10 ms</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (holder.count) &#123;</span><br><span class="line">        <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">        <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">            [holder count]; <span class="comment">// release in queue</span></span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)_trimToAge:(<span class="built_in">NSTimeInterval</span>)ageLimit &#123;</span><br><span class="line">    <span class="type">BOOL</span> finish = <span class="literal">NO</span>;</span><br><span class="line">    <span class="built_in">NSTimeInterval</span> now = <span class="built_in">CACurrentMediaTime</span>();</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (ageLimit &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        [_lru removeAll];</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!_lru-&gt;_tail || (now - _lru-&gt;_tail-&gt;_time) &lt;= ageLimit) &#123;</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (finish) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">NSMutableArray</span> *holder = [<span class="built_in">NSMutableArray</span> new];</span><br><span class="line">    <span class="keyword">while</span> (!finish) &#123;</span><br><span class="line">        <span class="keyword">if</span> (pthread_mutex_trylock(&amp;_lock) == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (_lru-&gt;_tail &amp;&amp; (now - _lru-&gt;_tail-&gt;_time) &gt; ageLimit) &#123;</span><br><span class="line">                _YYLinkedMapNode *node = [_lru removeTailNode];</span><br><span class="line">                <span class="keyword">if</span> (node) [holder addObject:node];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                finish = <span class="literal">YES</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            usleep(<span class="number">10</span> * <span class="number">1000</span>); <span class="comment">//10 ms</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (holder.count) &#123;</span><br><span class="line">        <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">        <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">            [holder count]; <span class="comment">// release in queue</span></span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程梳理： - <code>_trimToCost:</code>： - 非空判断 - 若有缓存，判断
+<code>_lru-&gt;_totalCost &gt; costLimit</code>，从链表尾部依次取出
+nodes - 根据 <code>_lru-&gt;_releaseOnMainThread</code>
+判断释放线程，释放 nodes - <code>_trimToCount:</code>： - 非空判断 -
+若有缓存，判断
+<code>_lru-&gt;_totalCount &gt; countLimit</code>，从链表尾部依次取出
+nodes - 根据 <code>_lru-&gt;_releaseOnMainThread</code>
+判断释放线程，释放 nodes - <code>_trimToAge:</code>： - 非空判断 -
+若有缓存，判断
+<code>_lru-&gt;_tail &amp;&amp; (now - _lru-&gt;_tail-&gt;_time) &gt; ageLimit</code>，从尾节点依次向头节点判断，若尾节点的时间不满足，则取出加入
+nodes；直到第一个满足时间要求的节点为止。（本身链表的排序也是按照 time
+来的，越旧未访问的内容，越靠近尾部） - 根据
+<code>_lru-&gt;_releaseOnMainThread</code> 判断释放线程，释放 nodes</p>
+<p>自己的思考： - <code>_trimToAge:</code> 中的 age
+指的是最近访问时间，而不是创建时间。带着这个认知，再看
+<code>_trimToAge:</code> 的实现，思路就会很清楚了。</p>
+<h3 id="缓存清理策略小结">缓存清理策略小结</h3>
+<p>缓存清理策略的维度： - cost：缓存消耗 - count：缓存数量 -
+age：缓存的最近访问时间</p>
+<p>缓存清理的方式： - 默认支持自动缓存清理 - 也支持手动清理</p>
+<h2 id="yydiskcache">YYDiskCache</h2>
+<p>简化后的 <code>YYDiskCache.h</code>：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYDiskCache</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) <span class="built_in">NSString</span> *path;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) <span class="built_in">NSUInteger</span> inlineThreshold;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="built_in">NSData</span> *(^customArchiveBlock)(<span class="type">id</span> object);</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="type">id</span> (^customUnarchiveBlock)(<span class="built_in">NSData</span> *data);</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">copy</span>) <span class="built_in">NSString</span> *(^customFileNameBlock)(<span class="built_in">NSString</span> *key);</span><br><span class="line"></span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSUInteger</span> countLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSUInteger</span> costLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSTimeInterval</span> ageLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSUInteger</span> freeDiskSpaceLimit;</span><br><span class="line"><span class="keyword">@property</span> <span class="built_in">NSTimeInterval</span> autoTrimInterval;</span><br><span class="line"><span class="keyword">@property</span> <span class="type">BOOL</span> errorLogsEnabled;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Initializer</span></span><br><span class="line">- (<span class="keyword">instancetype</span>)init UNAVAILABLE_ATTRIBUTE;</span><br><span class="line">+ (<span class="keyword">instancetype</span>)new UNAVAILABLE_ATTRIBUTE;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path</span><br><span class="line">                      inlineThreshold:(<span class="built_in">NSUInteger</span>)threshold <span class="built_in">NS_DESIGNATED_INITIALIZER</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Access Methods</span></span><br><span class="line">- (<span class="type">BOOL</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span>(^)(<span class="built_in">NSString</span> *key, <span class="type">BOOL</span> contains))block;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)objectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)objectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span>(^)(<span class="built_in">NSString</span> *key, <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt; _Nullable object))block;</span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="keyword">nullable</span> <span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">void</span>)removeObjectForKey:(<span class="built_in">NSString</span> *)key withBlock:(<span class="type">void</span>(^)(<span class="built_in">NSString</span> *key))block;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjects;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line">- (<span class="type">void</span>)removeAllObjectsWithProgressBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">int</span> removedCount, <span class="type">int</span> totalCount))progress</span><br><span class="line">                                 endBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">BOOL</span> error))end;</span><br><span class="line"></span><br><span class="line">- (<span class="built_in">NSInteger</span>)totalCount;</span><br><span class="line">- (<span class="type">void</span>)totalCountWithBlock:(<span class="type">void</span>(^)(<span class="built_in">NSInteger</span> totalCount))block;</span><br><span class="line">- (<span class="built_in">NSInteger</span>)totalCost;</span><br><span class="line">- (<span class="type">void</span>)totalCostWithBlock:(<span class="type">void</span>(^)(<span class="built_in">NSInteger</span> totalCost))block;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Trim</span></span><br><span class="line">- (<span class="type">void</span>)trimToCount:(<span class="built_in">NSUInteger</span>)count;</span><br><span class="line">- (<span class="type">void</span>)trimToCount:(<span class="built_in">NSUInteger</span>)count withBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line">- (<span class="type">void</span>)trimToCost:(<span class="built_in">NSUInteger</span>)cost;</span><br><span class="line">- (<span class="type">void</span>)trimToCost:(<span class="built_in">NSUInteger</span>)cost withBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line">- (<span class="type">void</span>)trimToAge:(<span class="built_in">NSTimeInterval</span>)age;</span><br><span class="line">- (<span class="type">void</span>)trimToAge:(<span class="built_in">NSTimeInterval</span>)age withBlock:(<span class="type">void</span>(^)(<span class="type">void</span>))block;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Extended Data</span></span><br><span class="line">+ (<span class="keyword">nullable</span> <span class="built_in">NSData</span> *)getExtendedDataFromObject:(<span class="type">id</span>)object;</span><br><span class="line">+ (<span class="type">void</span>)setExtendedData:(<span class="keyword">nullable</span> <span class="built_in">NSData</span> *)extendedData toObject:(<span class="type">id</span>)object;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>需要注意的点：</p>
+<ol type="1">
+<li>YYDiskCache 禁用了 init 和 new 的初始化方法。通过
+<code>UNAVAILABLE_ATTRIBUTE</code>，将这两种初始化方法设为私有。</li>
+<li><strong>NS_DESIGNATED_INITIALIZER</strong>
+<ul>
+<li>为什么用这个宏？
+<ul>
+<li>为了告诉调用者需要用这个方法来初始化类对象</li>
+</ul></li>
+<li>使用的注意事项：
+<ul>
+<li>如果子类指定了新的初始化器，在这个初始化器的内部必须调用父类
+Designated Initializer，并重写父类 Designated
+Initializer，将其指向子类新的初始化器。例如： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">instancetype</span>)initWithName:(<span class="built_in">NSString</span> *)name <span class="built_in">NS_DESIGNATED_INITIALIZER</span>;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">	<span class="keyword">return</span> [<span class="keyword">self</span> initWithName:<span class="string">@&quot;&quot;</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)initWithName:(<span class="built_in">NSString</span> *)name &#123;</span><br><span class="line">	<span class="keyword">self</span> = [<span class="variable language_">super</span> init];</span><br><span class="line">	<span class="keyword">if</span> (<span class="keyword">self</span>) &#123;</span><br><span class="line">		<span class="comment">// do something</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">self</span>; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul></li>
+</ul></li>
+<li>配合使用
+<ul>
+<li>配合使用 <code>UNAVAILABLE_ATTRIBUTE</code> 和
+<code>NS_DESIGNATED_INITIALIZER</code>，目的在于指定初始化方法。格式如下：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="keyword">instancetype</span>)new <span class="built_in">NS_UNAVAILABLE</span>;</span><br><span class="line">- (<span class="keyword">instancetype</span>)init <span class="built_in">NS_UNAVAILABLE</span>;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)initWithName:(<span class="built_in">NSString</span> *)name <span class="built_in">NS_DESIGNATED_INITIALIZER</span>;</span><br></pre></td></tr></table></figure></li>
+</ul></li>
+</ol>
+<p>接着对应看下实现文件的源码实现。</p>
+<h3 id="初始化-1">初始化</h3>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path &#123;</span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">self</span> initWithPath:path inlineThreshold:<span class="number">1024</span> * <span class="number">20</span>]; <span class="comment">// 20KB</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path</span><br><span class="line">             inlineThreshold:(<span class="built_in">NSUInteger</span>)threshold &#123;</span><br><span class="line">    <span class="keyword">self</span> = [<span class="variable language_">super</span> init];</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">self</span>) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    </span><br><span class="line">    YYDiskCache *globalCache = _YYDiskCacheGetGlobal(path);</span><br><span class="line">    <span class="keyword">if</span> (globalCache) <span class="keyword">return</span> globalCache;</span><br><span class="line">    </span><br><span class="line">    YYKVStorageType type;</span><br><span class="line">    <span class="keyword">if</span> (threshold == <span class="number">0</span>) &#123;</span><br><span class="line">        type = YYKVStorageTypeFile;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (threshold == <span class="built_in">NSUIntegerMax</span>) &#123;</span><br><span class="line">        type = YYKVStorageTypeSQLite;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        type = YYKVStorageTypeMixed;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    YYKVStorage *kv = [[YYKVStorage alloc] initWithPath:path type:type];</span><br><span class="line">    <span class="keyword">if</span> (!kv) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    </span><br><span class="line">    _kv = kv;</span><br><span class="line">    _path = path;</span><br><span class="line">    _lock = dispatch_semaphore_create(<span class="number">1</span>);</span><br><span class="line">    _queue = dispatch_queue_create(<span class="string">&quot;com.ibireme.cache.disk&quot;</span>, DISPATCH_QUEUE_CONCURRENT);</span><br><span class="line">    _inlineThreshold = threshold;</span><br><span class="line">    _countLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _costLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _ageLimit = DBL_MAX;</span><br><span class="line">    _freeDiskSpaceLimit = <span class="number">0</span>;</span><br><span class="line">    _autoTrimInterval = <span class="number">60</span>;</span><br><span class="line">    </span><br><span class="line">    [<span class="keyword">self</span> _trimRecursively];</span><br><span class="line">    _YYDiskCacheSetGlobal(<span class="keyword">self</span>);</span><br><span class="line">    </span><br><span class="line">    [[<span class="built_in">NSNotificationCenter</span> defaultCenter] addObserver:<span class="keyword">self</span> selector:<span class="keyword">@selector</span>(_appWillBeTerminated) name:<span class="built_in">UIApplicationWillTerminateNotification</span> object:<span class="literal">nil</span>];</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中 <code>_kv</code> 是 YYMemoryCache 与 <code>YYKVStorage</code>
+的一个联系点，所有的增删改查操作，都需要通过 <code>_kv</code>
+来实现。我们看下 <code>YYKVStorage</code> 内部的是怎么操作数据的。</p>
+<p>另一个是 DiskCache 真实的存储分为文件和 SQLite
+存储，在初始化时，可以指定存储方式。即设置： <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">@property</span> (<span class="keyword">readonly</span>) <span class="built_in">NSUInteger</span> inlineThreshold; <span class="comment">// 默认 1024 * 20，20kb</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="kvstorage">KVStorage</h3>
+<h4 id="yykvstoragetype">YYKVStorageType</h4>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="built_in">NS_ENUM</span>(<span class="built_in">NSUInteger</span>, YYKVStorageType) &#123;</span><br><span class="line">    YYKVStorageTypeFile = <span class="number">0</span>,</span><br><span class="line">    YYKVStorageTypeSQLite = <span class="number">1</span>,</span><br><span class="line">    YYKVStorageTypeMixed = <span class="number">2</span>,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>梳理： - YYKVStorageTypeFile：在 SQLite 中直接存文件的路径，不在
+SQLite 中存要存储的值 - YYKVStorageTypeSQLite：只在 SQLite
+中存要存储的值 -
+YYKVStorageTypeMixed：根据文件大小来确定要存储的值存放形式（File 或
+SQLite），默认使用它。 - 选用通过 <code>inlineThreshold</code>
+确定。</p>
+<h4 id="yykvstorageitem-与-yykvstorage">YYKVStorageItem 与
+YYKVStorage</h4>
+<p>YYKVStorage 类似于 MemoryCache 里面的 node。DiskCache
+每一项被封装成了 YYKVStorageItem 实例，再通过 YYKVStorage 来管理
+YYKVStorageItem。</p>
+<p>YYKVStorageItem 结构如下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">YYKVStorageItem</span> : <span class="title">NSObject</span></span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *key;                <span class="comment">///&lt; key</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSData</span> *value;                <span class="comment">///&lt; value</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *filename; <span class="comment">///&lt; filename (nil if inline)</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>) <span class="type">int</span> size;                             <span class="comment">///&lt; value&#x27;s size in bytes</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>) <span class="type">int</span> modTime;                          <span class="comment">///&lt; 修改时间戳</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>) <span class="type">int</span> accessTime;                       <span class="comment">///&lt; 最后访问时间戳</span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nullable</span>, <span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSData</span> *extendedData; <span class="comment">///&lt; extended data (nil if no extended data)</span></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>KVStorage 的接口：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Save Items</span></span><br><span class="line">- (<span class="type">BOOL</span>)saveItem:(YYKVStorageItem *)item;</span><br><span class="line">- (<span class="type">BOOL</span>)saveItemWithKey:(<span class="built_in">NSString</span> *)key value:(<span class="built_in">NSData</span> *)value;</span><br><span class="line">- (<span class="type">BOOL</span>)saveItemWithKey:(<span class="built_in">NSString</span> *)key</span><br><span class="line">                  value:(<span class="built_in">NSData</span> *)value</span><br><span class="line">               filename:(<span class="keyword">nullable</span> <span class="built_in">NSString</span> *)filename</span><br><span class="line">           extendedData:(<span class="keyword">nullable</span> <span class="built_in">NSData</span> *)extendedData;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Remove Items</span></span><br><span class="line">- (<span class="type">BOOL</span>)removeItemForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="type">BOOL</span>)removeItemForKeys:(<span class="built_in">NSArray</span>&lt;<span class="built_in">NSString</span> *&gt; *)keys;</span><br><span class="line">- (<span class="type">BOOL</span>)removeItemsLargerThanSize:(<span class="type">int</span>)size;</span><br><span class="line">- (<span class="type">BOOL</span>)removeItemsEarlierThanTime:(<span class="type">int</span>)time;</span><br><span class="line">- (<span class="type">BOOL</span>)removeItemsToFitSize:(<span class="type">int</span>)maxSize;</span><br><span class="line">- (<span class="type">BOOL</span>)removeItemsToFitCount:(<span class="type">int</span>)maxCount;</span><br><span class="line">- (<span class="type">BOOL</span>)removeAllItems;</span><br><span class="line">- (<span class="type">void</span>)removeAllItemsWithProgressBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">int</span> removedCount, <span class="type">int</span> totalCount))progress</span><br><span class="line">                               endBlock:(<span class="keyword">nullable</span> <span class="type">void</span>(^)(<span class="type">BOOL</span> error))end;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> mark - Get Items</span></span><br><span class="line">- (<span class="keyword">nullable</span> YYKVStorageItem *)getItemForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="keyword">nullable</span> YYKVStorageItem *)getItemInfoForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="built_in">NSData</span> *)getItemValueForKey:(<span class="built_in">NSString</span> *)key;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="built_in">NSArray</span>&lt;YYKVStorageItem *&gt; *)getItemForKeys:(<span class="built_in">NSArray</span>&lt;<span class="built_in">NSString</span> *&gt; *)keys;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="built_in">NSArray</span>&lt;YYKVStorageItem *&gt; *)getItemInfoForKeys:(<span class="built_in">NSArray</span>&lt;<span class="built_in">NSString</span> *&gt; *)keys;</span><br><span class="line">- (<span class="keyword">nullable</span> <span class="built_in">NSDictionary</span>&lt;<span class="built_in">NSString</span> *, <span class="built_in">NSData</span> *&gt; *)getItemValueForKeys:(<span class="built_in">NSArray</span>&lt;<span class="built_in">NSString</span> *&gt; *)keys;</span><br></pre></td></tr></table></figure>
+<h4 id="saveupdate-的过程">Save/Update 的过程</h4>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">BOOL</span>)saveItem:(YYKVStorageItem *)item &#123;</span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">self</span> saveItemWithKey:item.key value:item.value filename:item.filename extendedData:item.extendedData];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)saveItemWithKey:(<span class="built_in">NSString</span> *)key value:(<span class="built_in">NSData</span> *)value &#123;</span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">self</span> saveItemWithKey:key value:value filename:<span class="literal">nil</span> extendedData:<span class="literal">nil</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)saveItemWithKey:(<span class="built_in">NSString</span> *)key value:(<span class="built_in">NSData</span> *)value filename:(<span class="built_in">NSString</span> *)filename extendedData:(<span class="built_in">NSData</span> *)extendedData &#123;</span><br><span class="line">    <span class="keyword">if</span> (key.length == <span class="number">0</span> || value.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    <span class="keyword">if</span> (_type == YYKVStorageTypeFile &amp;&amp; filename.length == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (filename.length) &#123;</span><br><span class="line">        <span class="keyword">if</span> (![<span class="keyword">self</span> _fileWriteWithName:filename data:value]) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (![<span class="keyword">self</span> _dbSaveWithKey:key value:value fileName:filename extendedData:extendedData]) &#123;</span><br><span class="line">            [<span class="keyword">self</span> _fileDeleteWithName:filename];</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (_type != YYKVStorageTypeSQLite) &#123;</span><br><span class="line">            <span class="built_in">NSString</span> *filename = [<span class="keyword">self</span> _dbGetFilenameWithKey:key];</span><br><span class="line">            <span class="keyword">if</span> (filename) &#123;</span><br><span class="line">                [<span class="keyword">self</span> _fileDeleteWithName:filename];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> [<span class="keyword">self</span> _dbSaveWithKey:key value:value fileName:<span class="literal">nil</span> extendedData:extendedData];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过程描述: - 校验 key value - type 为 YYKVStorageTypeFile 时，校验
+filename 是否存在 - 判断是否有 filename（**_kv.type !=
+YYKVStorageTypeSQLite** &amp;&amp; **value.length &gt;
+_inlineThreshold**时创建 filename) - 疑问：如果 YYKVStorageTypeFile
+的话，依旧会按照上面进行文件大小判断，再创建文件名 - 若有
+filename，value 以 filename
+写入文件；文件写入成功后，将相关数据写入数据库 db - 若没有 filename，且
+type 不为 YYKVStorageTypeSQLite - 从 db 查询
+filename，若有，清空对应文件 - 将相关数据写入 db，只是不写入文件</p>
+<h4 id="remove-的过程">Remove 的过程</h4>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">BOOL</span>)removeItemForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (key.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    <span class="keyword">switch</span> (_type) &#123;</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeSQLite: &#123;</span><br><span class="line">            <span class="keyword">return</span> [<span class="keyword">self</span> _dbDeleteItemWithKey:key];</span><br><span class="line">        &#125; <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeFile:</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeMixed: &#123;</span><br><span class="line">            <span class="built_in">NSString</span> *filename = [<span class="keyword">self</span> _dbGetFilenameWithKey:key];</span><br><span class="line">            <span class="keyword">if</span> (filename) &#123;</span><br><span class="line">                [<span class="keyword">self</span> _fileDeleteWithName:filename];</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> [<span class="keyword">self</span> _dbDeleteItemWithKey:key];</span><br><span class="line">        &#125; <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">default</span>: <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)removeItemForKeys:(<span class="built_in">NSArray</span> *)keys &#123;</span><br><span class="line">    <span class="keyword">if</span> (keys.count == <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    <span class="keyword">switch</span> (_type) &#123;</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeSQLite: &#123;</span><br><span class="line">            <span class="keyword">return</span> [<span class="keyword">self</span> _dbDeleteItemWithKeys:keys];</span><br><span class="line">        &#125; <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeFile:</span><br><span class="line">        <span class="keyword">case</span> YYKVStorageTypeMixed: &#123;</span><br><span class="line">            <span class="built_in">NSArray</span> *filenames = [<span class="keyword">self</span> _dbGetFilenameWithKeys:keys];</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">NSString</span> *filename <span class="keyword">in</span> filenames) &#123;</span><br><span class="line">                [<span class="keyword">self</span> _fileDeleteWithName:filename];</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> [<span class="keyword">self</span> _dbDeleteItemWithKeys:keys];</span><br><span class="line">        &#125; <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">default</span>: <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)removeAllItems &#123;</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">self</span> _dbClose]) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    [<span class="keyword">self</span> _reset];</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">self</span> _dbOpen]) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">self</span> _dbInitialize]) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)removeAllItemsWithProgressBlock:(<span class="type">void</span>(^)(<span class="type">int</span> removedCount, <span class="type">int</span> totalCount))progress</span><br><span class="line">                               endBlock:(<span class="type">void</span>(^)(<span class="type">BOOL</span> error))end &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="type">int</span> total = [<span class="keyword">self</span> _dbGetTotalItemCount];</span><br><span class="line">    <span class="keyword">if</span> (total &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (end) end(total &lt; <span class="number">0</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="type">int</span> left = total;</span><br><span class="line">        <span class="type">int</span> perCount = <span class="number">32</span>;</span><br><span class="line">        <span class="built_in">NSArray</span> *items = <span class="literal">nil</span>;</span><br><span class="line">        <span class="type">BOOL</span> suc = <span class="literal">NO</span>;</span><br><span class="line">        <span class="keyword">do</span> &#123;</span><br><span class="line">            items = [<span class="keyword">self</span> _dbGetItemSizeInfoOrderByTimeAscWithLimit:perCount];</span><br><span class="line">            <span class="keyword">for</span> (YYKVStorageItem *item <span class="keyword">in</span> items) &#123;</span><br><span class="line">                <span class="keyword">if</span> (left &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (item.filename) &#123;</span><br><span class="line">                        [<span class="keyword">self</span> _fileDeleteWithName:item.filename];</span><br><span class="line">                    &#125;</span><br><span class="line">                    suc = [<span class="keyword">self</span> _dbDeleteItemWithKey:item.key];</span><br><span class="line">                    left--;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!suc) <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (progress) progress(total - left, total);</span><br><span class="line">        &#125; <span class="keyword">while</span> (left &gt; <span class="number">0</span> &amp;&amp; items.count &gt; <span class="number">0</span> &amp;&amp; suc);</span><br><span class="line">        <span class="keyword">if</span> (suc) [<span class="keyword">self</span> _dbCheckpoint];</span><br><span class="line">        <span class="keyword">if</span> (end) end(!suc);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>部分 Remove 的过程，以
+<code>removeAllItemsWithProgressBlock:endBlock:</code> 为例： -
+若无缓存，结束，end block - 若有缓存，每次从 db 最多取出 32
+个缓存项，遍历移除文件和 db 内容 - 每删除 32 个缓存，回调一次
+progressBlock（progress = (total - left)/total） - 删除完成 endBlock</p>
+<h4 id="get-的过程">Get 的过程</h4>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">- (YYKVStorageItem *)getItemForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (key.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    YYKVStorageItem *item = [<span class="keyword">self</span> _dbGetItemWithKey:key excludeInlineData:<span class="literal">NO</span>];</span><br><span class="line">    <span class="keyword">if</span> (item) &#123;</span><br><span class="line">        [<span class="keyword">self</span> _dbUpdateAccessTimeWithKey:key];</span><br><span class="line">        <span class="keyword">if</span> (item.filename) &#123;</span><br><span class="line">            item.value = [<span class="keyword">self</span> _fileReadWithName:item.filename];</span><br><span class="line">            <span class="keyword">if</span> (!item.value) &#123;</span><br><span class="line">                [<span class="keyword">self</span> _dbDeleteItemWithKey:key];</span><br><span class="line">                item = <span class="literal">nil</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> item;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>以 <code>getItemForKey:</code> 为例： - 校验 key - 从 db 中根据 key
+取出 YYKVStorageItem 格式的数据 - 更新 db 中这条数据的时间 - 如果有
+filename，以 filename 从文件中取出 value 并返回给 item.value - 若
+item.value 为空，从 db 中移除这条无效缓存 - 返回 item</p>
+<h3 id="yydiskcache-的对应处理">YYDiskCache 的对应处理</h3>
+<p>了解了 YYKVStorage 的存取实现逻辑后，回过头再来看下上层 YYDiskCache
+是如何实现对应方法的。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">BOOL</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    Lock();</span><br><span class="line">    <span class="type">BOOL</span> contains = [_kv itemExistsForKey:key];</span><br><span class="line">    Unlock();</span><br><span class="line">    <span class="keyword">return</span> contains;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)objectForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    Lock();</span><br><span class="line">    YYKVStorageItem *item = [_kv getItemForKey:key];</span><br><span class="line">    Unlock();</span><br><span class="line">    <span class="keyword">if</span> (!item.value) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="type">id</span> object = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (_customUnarchiveBlock) &#123;</span><br><span class="line">        object = _customUnarchiveBlock(item.value);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">@try</span> &#123;</span><br><span class="line">            object = [<span class="built_in">NSKeyedUnarchiver</span> unarchiveObjectWithData:item.value];</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">@catch</span> (<span class="built_in">NSException</span> *exception) &#123;</span><br><span class="line">            <span class="comment">// nothing to do...</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (object &amp;&amp; item.extendedData) &#123;</span><br><span class="line">        [YYDiskCache setExtendedData:item.extendedData toObject:object];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> object;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)setObject:(<span class="type">id</span>&lt;<span class="built_in">NSCoding</span>&gt;)object forKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">if</span> (!object) &#123;</span><br><span class="line">        [<span class="keyword">self</span> removeObjectForKey:key];</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">NSData</span> *extendedData = [YYDiskCache getExtendedDataFromObject:object];</span><br><span class="line">    <span class="built_in">NSData</span> *value = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (_customArchiveBlock) &#123;</span><br><span class="line">        value = _customArchiveBlock(object);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">@try</span> &#123;</span><br><span class="line">            value = [<span class="built_in">NSKeyedArchiver</span> archivedDataWithRootObject:object];</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">@catch</span> (<span class="built_in">NSException</span> *exception) &#123;</span><br><span class="line">            <span class="comment">// nothing to do...</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!value) <span class="keyword">return</span>;</span><br><span class="line">    <span class="built_in">NSString</span> *filename = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (_kv.type != YYKVStorageTypeSQLite) &#123;</span><br><span class="line">        <span class="keyword">if</span> (value.length &gt; _inlineThreshold) &#123;</span><br><span class="line">            filename = [<span class="keyword">self</span> _filenameForKey:key];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    Lock();</span><br><span class="line">    [_kv saveItemWithKey:key value:value filename:filename extendedData:extendedData];</span><br><span class="line">    Unlock();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>列出了
+<code>-containsObjectForKey:</code>、<code>objectForKey:</code>、<code>setObject:forKey:</code>
+方法对应的源码。在每次的 <code>_kv</code>
+操作时，都会进行加锁和解锁。</p>
+<p>这里使用了宏来代替加锁解锁的代码：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> Lock() dispatch_semaphore_wait(self-&gt;_lock, DISPATCH_TIME_FOREVER)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> Unlock() dispatch_semaphore_signal(self-&gt;_lock)</span></span><br></pre></td></tr></table></figure>
+<p>后面结合 YYMemoryCache，一起看下两种锁的区别。</p>
+<h2 id="nsmaptable">NSMapTable</h2>
+<p>NSMapTable 是类似于字典的集合，但具有更广泛的可用内存语义。NSMapTable
+是 iOS6 之后引入的类，它基于 NSDictionary 建模，但是具有以下差异： -
+key-value 可以选择弱持有，以便于在回收其中一个对象时删除对应条目。 -
+它可以包含任意指针（其内容不被约束为对象）。 - 我们可以将 NSMapTable
+实例配置为对任意指针进行操作，而不仅仅是对象。</p>
+<p>官方文档：<a
+href="https://developer.apple.com/documentation/foundation/nsmaptable?language=objc">NSMapTable
+官方文档</a></p>
+<p>YYDiskCache 内部是基于一个单例 NSMapTable 管理的。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/// weak reference for all instances</span></span><br><span class="line"><span class="keyword">static</span> <span class="built_in">NSMapTable</span> *_globalInstances; <span class="comment">// _globalInstances 管理所有 YYDiskCache 实例</span></span><br><span class="line"><span class="keyword">static</span> dispatch_semaphore_t _globalInstancesLock; <span class="comment">// 使用 dispatch_semaphore 保障 NSMapTable 线程安全</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="type">void</span> _YYDiskCacheInitGlobal() &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">dispatch_once_t</span> onceToken;</span><br><span class="line">    <span class="built_in">dispatch_once</span>(&amp;onceToken, ^&#123;</span><br><span class="line">        _globalInstancesLock = dispatch_semaphore_create(<span class="number">1</span>);</span><br><span class="line">        _globalInstances = [[<span class="built_in">NSMapTable</span> alloc] initWithKeyOptions:<span class="built_in">NSPointerFunctionsStrongMemory</span> valueOptions:<span class="built_in">NSPointerFunctionsWeakMemory</span> capacity:<span class="number">0</span>];</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> YYDiskCache *_YYDiskCacheGetGlobal(<span class="built_in">NSString</span> *path) &#123;</span><br><span class="line">    <span class="keyword">if</span> (path.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    _YYDiskCacheInitGlobal();</span><br><span class="line">    dispatch_semaphore_wait(_globalInstancesLock, DISPATCH_TIME_FOREVER);</span><br><span class="line">    <span class="type">id</span> cache = [_globalInstances objectForKey:path];</span><br><span class="line">    dispatch_semaphore_signal(_globalInstancesLock);</span><br><span class="line">    <span class="keyword">return</span> cache;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="type">void</span> _YYDiskCacheSetGlobal(YYDiskCache *cache) &#123;</span><br><span class="line">    <span class="keyword">if</span> (cache.path.length == <span class="number">0</span>) <span class="keyword">return</span>;</span><br><span class="line">    _YYDiskCacheInitGlobal();</span><br><span class="line">    dispatch_semaphore_wait(_globalInstancesLock, DISPATCH_TIME_FOREVER);</span><br><span class="line">    [_globalInstances setObject:cache forKey:cache.path];</span><br><span class="line">    dispatch_semaphore_signal(_globalInstancesLock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每当初始化 YYDiskCache 时，先到 NSMapTable 中获取对应 path 的
+YYDiskCache 实例。如果获取不到，会重新初始化一个 YYDiskCache
+实例，并且将其引用在 NSMapTable 中，这样做也会提升不少性能。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path</span><br><span class="line">             inlineThreshold:(<span class="built_in">NSUInteger</span>)threshold &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 先从 NSMapTable 单例中通过 path 获取 YYDiskCache 实例</span></span><br><span class="line">	<span class="comment">// 如果获取到，直接返回该实例</span></span><br><span class="line">    YYDiskCache *globalCache = _YYDiskCacheGetGlobal(path);</span><br><span class="line">    <span class="keyword">if</span> (globalCache) <span class="keyword">return</span> globalCache;</span><br><span class="line">    </span><br><span class="line">    YYKVStorageType type;</span><br><span class="line">    <span class="keyword">if</span> (threshold == <span class="number">0</span>) &#123;</span><br><span class="line">        type = YYKVStorageTypeFile;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (threshold == <span class="built_in">NSUIntegerMax</span>) &#123;</span><br><span class="line">        type = YYKVStorageTypeSQLite;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        type = YYKVStorageTypeMixed;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 弱没有获取到，初始化一个新的 YYDiskCache 实例</span></span><br><span class="line">    YYKVStorage *kv = [[YYKVStorage alloc] initWithPath:path type:type];</span><br><span class="line">    <span class="keyword">if</span> (!kv) <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    </span><br><span class="line">    _kv = kv;</span><br><span class="line">    _path = path;</span><br><span class="line">    _lock = dispatch_semaphore_create(<span class="number">1</span>);</span><br><span class="line">    _queue = dispatch_queue_create(<span class="string">&quot;com.ibireme.cache.disk&quot;</span>, DISPATCH_QUEUE_CONCURRENT);</span><br><span class="line">    _inlineThreshold = threshold;</span><br><span class="line">    _countLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _costLimit = <span class="built_in">NSUIntegerMax</span>;</span><br><span class="line">    _ageLimit = DBL_MAX;</span><br><span class="line">    _freeDiskSpaceLimit = <span class="number">0</span>;</span><br><span class="line">    _autoTrimInterval = <span class="number">60</span>;</span><br><span class="line">    </span><br><span class="line">    [<span class="keyword">self</span> _trimRecursively];</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 向 NSMapTable 单例注册新生成的 YYDiskCache 实例</span></span><br><span class="line">    _YYDiskCacheSetGlobal(<span class="keyword">self</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="如何保证的线程安全">如何保证的线程安全</h2>
+<p>通过前面的代码分析，我们已经知道了 YYCache
+在增删改查的过程中，会进行加解锁操作。锁的目的也是为了保证线程的安全。分别看下
+MemoryCache 和 DiskCache 分别是怎么实现线程安全的。</p>
+<h3 id="yymemorycache-线程安全处理">YYMemoryCache 线程安全处理</h3>
+<p>YYMemoryCache 使用了 <code>pthread_mutex</code>
+线程锁来确保线程安全。ibireme 使用 pthread_mutex 的缘由：<a
+href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">不再安全的
+OSSpinLock</a>。简单言之，处于安全考虑选用了现在的
+<code>pthread_mutex</code>。</p>
+<p><code>pthread_mutex</code> 的基本用法：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 申明一个互斥锁</span></span><br><span class="line">pthread_mutex_t _lock;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化</span></span><br><span class="line">pthread_mutex_init(&amp;_lock,<span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用 _lock 之前一定要初始化，否则不生效</span></span><br><span class="line"><span class="comment">// 锁定互斥锁</span></span><br><span class="line">pthread_mutex_lock(&amp;_lock);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 解除锁定互斥锁</span></span><br><span class="line">pthread_mutex_unlock(&amp;_lock);</span><br><span class="line"></span><br><span class="line"><span class="comment">// pthread_mutex_lock() 的非阻塞版本</span></span><br><span class="line"><span class="comment">// 如果 _lock 所引用的互斥对象被任何线程（包括当前线程）锁定，将立刻返回该调用</span></span><br><span class="line"><span class="comment">// 否则该互斥锁将被锁定，调用线程为当前线程</span></span><br><span class="line"><span class="comment">// pthread_mutex_lock() 成功锁定后会返回 0，返回`其他任何值`表示`出错`</span></span><br><span class="line">pthread_mutex_trylock(&amp;_lock);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 销毁互斥锁</span></span><br><span class="line">pthread_mutex_destroy(&amp;_lock);</span><br></pre></td></tr></table></figure>
+<p><code>pthread_mutex</code> 表示互斥锁。互斥锁在申请锁时，调用了
+<code>pthread_mutex_lock</code> 方法，会导致线程休眠。</p>
+<p>YYMemoryCache 中：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">instancetype</span>)init &#123;</span><br><span class="line">    <span class="keyword">self</span> = <span class="variable language_">super</span>.init;</span><br><span class="line">    pthread_mutex_init(&amp;_lock, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)dealloc &#123;</span><br><span class="line">	<span class="comment">// ...</span></span><br><span class="line">    pthread_mutex_destroy(&amp;_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)_trimToCount:(<span class="built_in">NSUInteger</span>)countLimit &#123;</span><br><span class="line">    <span class="type">BOOL</span> finish = <span class="literal">NO</span>;</span><br><span class="line">    pthread_mutex_lock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (countLimit == <span class="number">0</span>) &#123;</span><br><span class="line">        [_lru removeAll];</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (_lru-&gt;_totalCount &lt;= countLimit) &#123;</span><br><span class="line">        finish = <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">    <span class="keyword">if</span> (finish) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">NSMutableArray</span> *holder = [<span class="built_in">NSMutableArray</span> new];</span><br><span class="line">    <span class="keyword">while</span> (!finish) &#123;</span><br><span class="line">        <span class="keyword">if</span> (pthread_mutex_trylock(&amp;_lock) == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (_lru-&gt;_totalCount &gt; countLimit) &#123;</span><br><span class="line">                _YYLinkedMapNode *node = [_lru removeTailNode];</span><br><span class="line">                <span class="keyword">if</span> (node) [holder addObject:node];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                finish = <span class="literal">YES</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pthread_mutex_unlock(&amp;_lock);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            usleep(<span class="number">10</span> * <span class="number">1000</span>); <span class="comment">//10 ms</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (holder.count) &#123;</span><br><span class="line">        <span class="built_in">dispatch_queue_t</span> queue = _lru-&gt;_releaseOnMainThread ? dispatch_get_main_queue() : YYMemoryCacheGetReleaseQueue();</span><br><span class="line">        <span class="built_in">dispatch_async</span>(queue, ^&#123;</span><br><span class="line">            [holder count]; <span class="comment">// release in queue</span></span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们看到 YYCache 中每次对 <code>_lru</code>
+操作时都会进行锁定和解除。也用到了
+<code>pthread_mutex_trylock(&amp;_lock)</code>。</p>
+<h3 id="yydiskcache-线程安全处理">YYDiskCache 线程安全处理</h3>
+<p>YYDiskCache
+使用了信号量（<strong>dispatch_semaphore</strong>）来保证线程的安全。Dispatch
+Semaphore 是持有计数的信号，计数为 0 时等待，计数 &gt;= 1 时放行。</p>
+<p><code>dispatch_semaphore</code> 的基本用法： -
+<code>dispatch_semaphore_create</code> 可以生成信号量，参数 value
+是信号量计数的初始值； - <code>dispatch_semaphore_wait</code>
+会让信号量值 -1，当信号量值为 0 时进入等待（直到超时），否则正常执行； -
+<code>dispatch_semaphore_signal</code> 会让信号量值 +1，如果有通过
+<code>dispatch_semaphore_wait</code> 函数等待 Dispatch Semaphore
+的计数值增加的线程，会由系统唤醒最先等待的线程执行。</p>
+<p>YYDiskCache 中：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">YYDiskCache</span> </span>&#123;</span><br><span class="line">    YYKVStorage *_kv;</span><br><span class="line">    dispatch_semaphore_t _lock;</span><br><span class="line">    <span class="built_in">dispatch_queue_t</span> _queue;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">instancetype</span>)initWithPath:(<span class="built_in">NSString</span> *)path</span><br><span class="line">             inlineThreshold:(<span class="built_in">NSUInteger</span>)threshold &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    _lock = dispatch_semaphore_create(<span class="number">1</span>);</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 通过宏来替换加锁解锁代码</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> Lock() dispatch_semaphore_wait(self-&gt;_lock, DISPATCH_TIME_FOREVER)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> Unlock() dispatch_semaphore_signal(self-&gt;_lock)</span></span><br><span class="line"></span><br><span class="line">- (<span class="type">BOOL</span>)containsObjectForKey:(<span class="built_in">NSString</span> *)key &#123;</span><br><span class="line">    <span class="keyword">if</span> (!key) <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    Lock();</span><br><span class="line">    <span class="type">BOOL</span> contains = [_kv itemExistsForKey:key];</span><br><span class="line">    Unlock();</span><br><span class="line">    <span class="keyword">return</span> contains;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到 YYDiskCache 中每次对 <code>_kv</code>
+操作时，都会进行加解锁操作。</p>
+<h3
+id="为什么线程安全的处理方式不同">为什么线程安全的处理方式不同？</h3>
+<p>先了解一个概念，<strong>信号量</strong>和<strong>互斥锁</strong>的区别：
+- 互斥锁用户用于线程的互斥，信号量用于线程的同步。 -
+同步和互斥是针对线程的。同步允许多线程按序访问；互斥只允许单个线程访问。
+-
+互斥：指某个资源同时只允许一个访问者对其访问，具有排他性。但互斥无法限制访问者对资源的访问顺序，即访问是无序的。
+-
+同步：指在互斥的基础上，通过其他机制实现访问者对资源的有序访问。即信号量可以让多个线程有序访问某个资源。</p>
+<p>YYDiskCache 在写入较大缓存时，会有较长的等待时间，而
+dispatch_semaphore 是不消耗 CPU 资源的，所以选用信号量。</p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>YYCache 框架结构
+<ul>
+<li>YYCache</li>
+<li>YYMemoryCache
+<ul>
+<li><code>_YYLinkedMap</code></li>
+<li><code>_YYLinkedMapNode</code></li>
+</ul></li>
+<li>YYDiskCache
+<ul>
+<li>YYKVStorage</li>
+<li>YYKVStorageItem</li>
+</ul></li>
+</ul></li>
+<li>YYCache
+<ul>
+<li>增删改查方法</li>
+<li>先操作 <code>_memoryCache</code>，再操作
+<code>_diskCache</code></li>
+<li>回调以 <code>_diskCache</code> 为准</li>
+<li>这一层没有真实的做数据处理</li>
+</ul></li>
+<li>LRU
+<ul>
+<li>Least Recently Used 最近最少使用</li>
+<li>缓存命中率</li>
+<li>MemoryCache LRU 的实现
+<ul>
+<li>通过双向链表类<code>_YYLinkedMap</code>，保存和管理链表节点
+<code>_YYLinkedMapNode</code>。</li>
+<li><code>_YYLinkedMapNode</code>
+<ul>
+<li><code>_prev</code></li>
+<li><code>_next</code></li>
+<li><code>value</code></li>
+</ul></li>
+<li><code>_YYLinedMap</code>
+<ul>
+<li><code>_dic</code>：存放链表节点</li>
+<li><code>_head</code>：头节点</li>
+<li><code>_tail</code>：尾节点</li>
+</ul></li>
+<li>每次数据访问时，将被访问节点调整到 head 位置</li>
+</ul></li>
+</ul></li>
+<li>YYMemoryCache
+<ul>
+<li>初始化
+<ul>
+<li>pthread_mutex 互斥锁</li>
+<li>三个缓存管理维度（count、cost、age）</li>
+<li>自动清理时间 5s</li>
+<li>默认内存警告、进入后台时，清空 memoryCache</li>
+</ul></li>
+<li>增删改查
+<ul>
+<li>每次数据访问</li>
+<li>pthread_mutex_lock 加锁</li>
+<li>访问修改数据，更新相关属性（time 等）</li>
+<li>pthread_mutex_unlock 解锁</li>
+</ul></li>
+<li>缓存清理
+<ul>
+<li>手动或自动</li>
+<li>三个维度（count、cost、age）</li>
+<li>从双向链表尾部开始清理</li>
+</ul></li>
+</ul></li>
+<li>YYDiskCache
+<ul>
+<li>初始化
+<ul>
+<li>内有一单例 NSMapTable</li>
+<li>先通过 path 从 NSMapTable
+中查是否有对应实例，有则用，无责新建并存</li>
+<li><code>_kv</code> 实例，类似 MemoryCache 的 <code>_dic</code></li>
+<li>dispatch_semaphore 信号量，自旋锁</li>
+<li>三个缓存维度（count、cost、age）</li>
+<li>自动清理</li>
+</ul></li>
+<li>增删改查
+<ul>
+<li>YYKVStorageType
+<ul>
+<li>File</li>
+<li>SQLite</li>
+<li>Mixed</li>
+</ul></li>
+<li>YYKVStorage 管理 YYKVStorageItem</li>
+<li>增删改查过程中既要修改文件、又要修改 SQLite 的数据</li>
+<li>dispatch_semaphore_wait 加锁</li>
+<li>处理数据</li>
+<li>dispatch_semaphore_signal 解锁</li>
+</ul></li>
+<li>NSMapTable
+<ul>
+<li>NSHashTable 更广泛意义的 NSSet、NSMutableSet</li>
+<li>NSMapTable 更广泛意义的 NSDictionary、NSMutableDictionary</li>
+<li>可以存储指针，内容不被约束为对象</li>
+</ul></li>
+<li>缓存清理
+<ul>
+<li>类似memorycache</li>
+</ul></li>
+</ul></li>
+<li>线程安全处理
+<ul>
+<li>pthread_mutex</li>
+<li>dispatch_semaphore</li>
+</ul></li>
+</ul>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/" title="NSHashTable 和 NSMapTable">
+                    <div class="nextTitle">NSHashTable 和 NSMapTable</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2017/09/10/2017-09-10-yyimage/" title="YYImage 源码梳理">
+                    <div class="prevTitle">YYImage 源码梳理</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1506787200000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#yycache-%E7%9A%84%E6%A1%86%E6%9E%B6%E7%BB%93%E6%9E%84"><span class="toc-number">1.</span> <span class="toc-text">YYCache 的框架结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#yycache"><span class="toc-number">2.</span> <span class="toc-text">YYCache</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.1.</span> <span class="toc-text">接口实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#lru"><span class="toc-number">3.</span> <span class="toc-text">LRU</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#insertnodeathead"><span class="toc-number">3.1.</span> <span class="toc-text">insertNodeAtHead:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bringnodetohead"><span class="toc-number">3.2.</span> <span class="toc-text">bringNodeToHead:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#removenode"><span class="toc-number">3.3.</span> <span class="toc-text">removeNode:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#removetailnode"><span class="toc-number">3.4.</span> <span class="toc-text">removeTailNode:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#removeall"><span class="toc-number">3.5.</span> <span class="toc-text">removeAll:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#lru-%E5%B0%8F%E7%BB%93"><span class="toc-number">3.6.</span> <span class="toc-text">LRU 小结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#yymemorycache"><span class="toc-number">4.</span> <span class="toc-text">YYMemoryCache</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">4.1.</span> <span class="toc-text">初始化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E7%9A%84%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0"><span class="toc-number">4.2.</span> <span class="toc-text">增删改查的接口实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E6%B8%85%E7%90%86%E7%AD%96%E7%95%A5"><span class="toc-number">4.3.</span> <span class="toc-text">缓存清理策略</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E6%B8%85%E7%90%86%E7%AD%96%E7%95%A5%E5%B0%8F%E7%BB%93"><span class="toc-number">4.4.</span> <span class="toc-text">缓存清理策略小结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#yydiskcache"><span class="toc-number">5.</span> <span class="toc-text">YYDiskCache</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-1"><span class="toc-number">5.1.</span> <span class="toc-text">初始化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#kvstorage"><span class="toc-number">5.2.</span> <span class="toc-text">KVStorage</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#yykvstoragetype"><span class="toc-number">5.2.1.</span> <span class="toc-text">YYKVStorageType</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#yykvstorageitem-%E4%B8%8E-yykvstorage"><span class="toc-number">5.2.2.</span> <span class="toc-text">YYKVStorageItem 与
+YYKVStorage</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#saveupdate-%E7%9A%84%E8%BF%87%E7%A8%8B"><span class="toc-number">5.2.3.</span> <span class="toc-text">Save&#x2F;Update 的过程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#remove-%E7%9A%84%E8%BF%87%E7%A8%8B"><span class="toc-number">5.2.4.</span> <span class="toc-text">Remove 的过程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#get-%E7%9A%84%E8%BF%87%E7%A8%8B"><span class="toc-number">5.2.5.</span> <span class="toc-text">Get 的过程</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#yydiskcache-%E7%9A%84%E5%AF%B9%E5%BA%94%E5%A4%84%E7%90%86"><span class="toc-number">5.3.</span> <span class="toc-text">YYDiskCache 的对应处理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nsmaptable"><span class="toc-number">6.</span> <span class="toc-text">NSMapTable</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E7%9A%84%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8"><span class="toc-number">7.</span> <span class="toc-text">如何保证的线程安全</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#yymemorycache-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E5%A4%84%E7%90%86"><span class="toc-number">7.1.</span> <span class="toc-text">YYMemoryCache 线程安全处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#yydiskcache-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E5%A4%84%E7%90%86"><span class="toc-number">7.2.</span> <span class="toc-text">YYDiskCache 线程安全处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84%E5%A4%84%E7%90%86%E6%96%B9%E5%BC%8F%E4%B8%8D%E5%90%8C"><span class="toc-number">7.3.</span> <span class="toc-text">为什么线程安全的处理方式不同？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">8.</span> <span class="toc-text">总结</span></a></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>

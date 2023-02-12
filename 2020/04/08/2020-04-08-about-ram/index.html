@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="iOS 的内核是 XNU，XNU 是 Darwin 的一部分，而 Darwin 又是基于 FreeBSD 和 NetBSD 开发，集成了 Mach 微内核，BSD 是基于 UNIX。虽然 Linux 也是基于 UNIX，但 Darwin 和 Linux 没有直接继承的关系。内核 Darwin 是 C 写的，中层框架和库时 C 和 Objective-C 写的。 本文先从一般桌面操作系统的内存机制入">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 内存相关梳理">
+<meta property="og:url" content="http://example.com/2020/04/08/2020-04-08-about-ram/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="iOS 的内核是 XNU，XNU 是 Darwin 的一部分，而 Darwin 又是基于 FreeBSD 和 NetBSD 开发，集成了 Mach 微内核，BSD 是基于 UNIX。虽然 Linux 也是基于 UNIX，但 Darwin 和 Linux 没有直接继承的关系。内核 Darwin 是 C 写的，中层框架和库时 C 和 Objective-C 写的。 本文先从一般桌面操作系统的内存机制入">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/09/14/uCNqZEKrQhRnijS.png">
+<meta property="article:published_time" content="2020-04-07T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-04-07T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="基础">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/09/14/uCNqZEKrQhRnijS.png">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>iOS 内存相关梳理 · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">iOS 内存相关梳理</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                iOS 内存相关梳理
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="基础">基础</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">10.7k</span>阅读时长: <span class="post-count reading-time">39 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2020/04/08</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <p>iOS 的内核是 XNU，XNU 是 Darwin 的一部分，而 Darwin 又是基于 FreeBSD
+和 NetBSD 开发，集成了 Mach 微内核，BSD 是基于 UNIX。虽然 Linux 也是基于
+UNIX，但 Darwin 和 Linux 没有直接继承的关系。内核 Darwin 是 C
+写的，中层框架和库时 C 和 Objective-C 写的。</p>
+<p>本文先从一般桌面操作系统的内存机制入手；接着从 iOS 系统层进行分析 iOS
+的内存机制及 iOS 系统运行时的内存占用情况；最后到 iOS 中单个 App
+的内存管理。</p>
+<span id="more"></span>
+<h2 id="一般操作系统的内存机制">一般操作系统的内存机制</h2>
+<p>在分析 iOS
+内存机制前，先看下一般操作系统（这里的一般操作系统指桌面操作系统）的内存机制是怎样的。</p>
+<h3 id="冯诺伊曼结构">冯·诺伊曼结构</h3>
+<p>冯·诺伊曼结构（Von Neumann
+architecture），也称<strong>冯·诺伊曼模型</strong>（Von Neumann
+model）或<strong>普林斯顿结构</strong>（Princeton
+architecture），是一种将程序指令存储器和数据存储器合并在一起的电脑设计概念结构。即将计算机指令进行编码后存储在计算机的存储器中，需要的时候可以顺序地执行程序代码，从而控制计算机运行，这就是冯.诺依曼计算机体系的开端。</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/386feb11d1fa9b59567f.png/kTePoRVhNC6MuKF.png"
+alt="冯·诺伊曼结构的设计概念" />
+<figcaption aria-hidden="true">冯·诺伊曼结构的设计概念</figcaption>
+</figure>
+<p>冯·诺依曼结构的优势。第一次将存储器和运算器分开，指令和数据都放在存储器中，为计算机的通用性奠定了基础。虽然在规范中计算单元依然是核心，但冯·诺依曼结构事实上导致了以存储器为核心的现代计算机的诞生。</p>
+<p>冯·诺依曼结构的瓶颈。冯·诺依曼结构实现了计算机大提速，却也埋下了一个隐患：在内存容量指数级提升以后，CPU
+和内存之间的数据传输带宽成为了瓶颈。简而言之，由于 CPU
+的读写速率比存储器高，在每次去内存里取字节时，CPU
+都需要等待存储器。这就造成了 CPU
+性能的浪费。目前的解决办法是通过多核+多级缓存来缓解这一瓶颈问题。</p>
+<h3 id="存储器的多级缓存">存储器的多级缓存</h3>
+<p>冯·诺依曼结构瓶颈的解决方式之一是设置多级缓存。先来看下存储器的层级结构。</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/abc428d68b8a682bc051.png/7jW5XfAIisGqmg2.png"
+alt="存储器的层级结构" />
+<figcaption aria-hidden="true">存储器的层级结构</figcaption>
+</figure>
+<p>如上存储器的层次结构图，能看到用到的存储器有
+SRAM、DRAM、磁盘等。这样，操作系统中的存储器就构成了一个金字塔，越往上的存储器速度越快，价格越贵，容量也越小。当
+CPU 接收到指令后，它会最先向 CPU 中的一级缓存（L1
+Cache）去寻找相关的数据，然一级缓存是与 CPU
+同频运行的，但是由于容量较小，所以不可能每次都命中。这时 CPU
+会继续向下一级的二级缓存（L2
+Cache）寻找，同样的道理，当所需要的数据在二级缓存中也没有的话，会继续转向
+L3 Cache、内存(主存)和硬盘。</p>
+<p>存储器分为两大类：</p>
+<ul>
+<li><p><strong>易失性存储：</strong>
+读写速度快，但断电后数据会丢失，容量小价格高。随机访问存储器（RAM）就属于这一类，RAM
+又分为 <strong>SRAM（静态）</strong>和
+<strong>DRAM（动态）</strong>。如上图的 <strong>L1~L3</strong> 属于
+SRAM，L4 属于 DRAM，通常 SRAM 主要集中在 CPU 芯片内部，价格昂贵，其中 L0
+寄存器本身就是 CPU 的组成部分之一，读写速度快。</p></li>
+<li><p><strong>非易失性存储：</strong>
+读写速度较慢，但断电后数据不会丢失，容量大价格相对低。计算机使用的硬盘就是
+ROM 的一种，手机用的 Flash 也属于 Rom。这里的<strong>只读存储器
+ROM</strong>，随着计算机发展已经支持了读写，只是沿用了之前的名称。</p></li>
+</ul>
+<p>采用多级缓存提升效率，是用到了<strong><code>局部性原理（Principle of locality）</code></strong>，即被使用过的存储器内容在未来可能被再次使用，它附近的数据项也大概率会被使用。当我们访问某个数据项是，将它周围数据项也放到对应缓存中，这样一定程度上节约了访问存储器的时间，提高了效率。</p>
+<h3 id="虚拟内存">虚拟内存</h3>
+<p>在知道存储器分为多级缓存后，这里自然引出了一个概念：物理内存。这里的物理内存指物理存储器为运行时的操作系统及进程提供的存储空间，是真实的物理空间及地址。但如果将这些物理地址直接暴露出去，会存在很多的危险性。为了解决这个问题，随之出现了要介绍的<strong><code>虚拟内存</code></strong>。</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/99b54600bc9b1744ed35.png/2Sr7mUI6Z5OHFnl.png"
+alt="虚拟内存与物理内存的关系" />
+<figcaption aria-hidden="true">虚拟内存与物理内存的关系</figcaption>
+</figure>
+<p>对于每个进程来说，操作系统通过虚拟内存，为每个进程提供了一个<strong><code>连续并私有的地址空间</code></strong>，从而保护每个进程的地址空间不被其他进程干扰。如上图，有了虚拟内存后，进程访问的是分配给它的虚拟内存，而虚拟内存实际可能映射到物理内存及磁盘的任何区域。</p>
+<h3 id="cpu-寻址方式">CPU 寻址方式</h3>
+<p>在存储器里以字节为单位存储信息，为正确地存取信息，每个字节单元给以一个唯一的存储器地址，称为物理地址（Physical
+Address）。</p>
+<p>物理地址之后拓展支持了分段和分页。内存的分段和分页管理方式都属于内存的不连续分配。什么是不连续分配？就是把程序分割成一块一块的装入内存，在物理上不用彼此相连，在逻辑上使用段表或页表将离散分布的这些小块串起来形成逻辑上连续的程序。</p>
+<p>在基本的分页概念中，把程序分成等长的小块。这些小块叫做<strong><code>页（Page）</code></strong>，同样内存也被分成了和页面同样大小的<strong><code>页框（Frame）</code></strong>，一个页可以装到一个页框里。在执行程序的时候，我们根据一个页表去查找某个页面在内存的某个页框中，由此完成了逻辑到物理的映射。</p>
+<p>分段和分页有很多类似的地方，但是最大的区别在于分页对于用户来说是没什么逻辑意义的，分页是为了完成离散存储，所有的页面大小都一样，对程序员来说这就像碎纸机一样，出来的东西没有完整意义。但是分段不一样，分段不定长，分页由系统完成，分段有时在编译过程中会指定划分，因此可以保留部分逻辑特征，容易实现分段共享。iOS
+下的每个进程空间先分段，每个段内再分页，所以物理地址是由<strong><code>段号 + 段内页号 + 页内地址</code></strong>组成。</p>
+<blockquote>
+<p>上述内容，参考自《计算机操作系统》，更多可自行查看。</p>
+</blockquote>
+<p>在早期计算机系统中，程序员都是直接访问物理地址进行编程，当程序出现错误时，整个系统都会瘫痪，或者在多进程系统中，当一个进程出现问题，对属于另外一个进程的数据或者指令区域进行写操作，会导致另外一个进程崩溃。于是虚拟地址就被提出，软件使用虚拟地址访问内存，而处理器负责虚拟地址到物理地址的映射工作，地址转换是靠
+CPU
+中的<strong><code>内存管理单元（Memory Management Unit，即 MMU）</code></strong>来完成。处理器采用多级页表来进行多次查找最终找到真正的物理地址。当处理器发现页表中找不到真正对应的物理地址时，就会发出一个异常，挂起寻址错误的进程，但是其他进程仍然可以正常工作。从虚拟地址到物理地址的转换过程可知：由于页表是存放在内存中的，使用一级页表进行地址转换时，每次读/写数据需要访问两次内存，第一次访问一级页表获得物理地址，第二次才是真正的读/写数据；使用两级页表时，每次读/写数据需要访问三次内存，访问两次页表（一级页表和二级页表）获得物理地址，第三次才是真正的读/写数据。</p>
+<p>拿处理器访问两级页表举例说明，当处理器拿到一个需要访问内存的<strong>虚拟地址
+A</strong>，首先查找 MMU
+里面页表地址寄存器得到页表在内存中的物理地址，然后 MMU
+通过访问内存控制器去访问内存中的两级页表得到 A1、A2 两个地址，A1 和 A2
+按照一定规则组合得虚拟地址 A 的物理地址 B，然后处理器在通过访问物理地址
+B 得到内存数据。</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/0efd0a174d2853abd281.png/Jdaul48woRYkXDB.png"
+alt="虚拟寻址过程" />
+<figcaption aria-hidden="true">虚拟寻址过程</figcaption>
+</figure>
+<p>这一地址转换过程大大降低了CPU的性能，有什么改进办法？</p>
+<p>程序执行过程中，所用到的指令、数据的地址往往集中在一个很小的范围内，其中的地址、数据经常多次使用，这称为程序访问的局部性。由此，通过使用一个高速、容量相对较小的存储器来存储近期用到的页表条目（段/大页/小页/极小页描述符），以避免每次地址转换时都到内存去查找，这样可以大幅度地提高性能。这个存储器用来帮助快速地进行地址转换，称为<strong><code>“转译查找缓存”（TLB Cache）</code></strong>。</p>
+<p>当 CPU 发出一个虚拟地址时，MMU 首先访问 TLB Cache，如果 TLB Cache
+中含有能转换这个虚拟地址的描述符，则直接利用此描述符进行地址转换和权限检查；否则
+MMU
+访问页表（页表是在主存中）找到描述符后再进行地址转换和权限检查，并将这个描述符填入
+TLB Cache 中（如果 TLB Cache 已满，则利用 round-robin
+算法找到一个条目，然后覆盖它），下次再使用这个虚拟地址时就可以直接使用
+TLB Cache 中的地址描述符了。</p>
+<p>TLB
+是一个<strong>内存管理单元</strong>用于改进虚拟地址到物理地址转换速度的缓存，位于
+MMU 中。</p>
+<h3 id="swap-内存交换机制swap-inout">Swap 内存交换机制（Swap
+In/Out）</h3>
+<p>物理内存是计算机的实际内存大小，由 RAM
+芯片组成。虚拟内存则是虚拟出来的、使用磁盘代替内存。虚拟内存的出现，让机器内存不够的情况得到部分解决。当程序运行起来由操作系统做具体虚拟内存到物理内存的替换和加载（相应的页与段的虚拟内存管理）。这里的虚拟内存交换过程即所谓的
+Swap。</p>
+<p>当用户提交程序，然后产生进程在机器上运行。机器会判断当前物理内存是否还有空闲允许进程调入内存运行，如果有则直接调入内存进行；如果没有，则会根据优先级选择一个进程挂起，把该进程交换到
+Swap Space
+中等待，然后把新的进程调入到内存中运行。根据这种换入和换出，实现了内存的循环利用，让用户感觉不到内存的限制。从这也可以看出
+Swap 扮演了一个非常重要的角色，就是暂存被换出的进程。</p>
+<h2 id="ios-的内存机制">iOS 的内存机制</h2>
+<p>官方给出的关于内存的相关文档介绍：<a
+href="https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/ManagingMemory.html#//apple_ref/doc/uid/10000160-SW1">Memory
+Usage Performance Guidelines</a>，看到最后的更新时间为 2013 年 04
+月，可以在需要时拿来作为参考。文档主要介绍的几点内容：</p>
+<ul>
+<li>关于虚拟内存系统</li>
+<li>内存分配的技巧</li>
+<li>缓存和内存清理</li>
+<li>跟踪内存的使用情况</li>
+<li>查找内存泄露</li>
+<li>启用 malloc 调试功能</li>
+<li>查看虚拟内存的使用情况</li>
+</ul>
+<h3 id="ios-对比桌面操作系统">iOS 对比桌面操作系统</h3>
+<p>基于前面对一般桌面操作系统的了解和官方提供的文档，来对比看下在 iOS
+中的内存。</p>
+<p>首先 iOS
+也和其他操作系统一样使用了虚拟内存机制，但区别于桌面操作系统的是：iOS
+不支持内存交换机制（Swap）。</p>
+<p>iOS 不支持 Swap 机制主要的两个原因：</p>
+<ul>
+<li>一方面，因为 iPhone 使用的是闪存
+Flash，频繁的读写会影响闪存的寿命</li>
+<li>另一方面，相比于桌面操作系统的电脑，手机的闪存空间很有限</li>
+</ul>
+<p>iOS 在内存优化上也下了很多心思，用到了内存压缩机制（Compressed
+memory），后面会具体介绍。Stackoverflow 上面查找看到一份关于 iOS
+中单应用可用最大内存的测试报告（<a
+href="https://stackoverflow.com/a/15200855">iOS app maximum memory
+budget</a>）。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">device: (crash amount/total amount/percentage of total)</span><br><span class="line"></span><br><span class="line">iPad1: 127MB/256MB/49%</span><br><span class="line">iPad2: 275MB/512MB/53%</span><br><span class="line">iPad3: 645MB/1024MB/62%</span><br><span class="line">iPad4: 585MB/1024MB/57% (iOS 8.1)</span><br><span class="line">iPad Mini 1st Generation: 297MB/512MB/58%</span><br><span class="line">iPad Mini retina: 696MB/1024MB/68% (iOS 7.1)</span><br><span class="line">iPad Air: 697MB/1024MB/68%</span><br><span class="line">iPad Air 2: 1383MB/2048MB/68% (iOS 10.2.1)</span><br><span class="line">iPad Pro 9.7&quot;: 1395MB/1971MB/71% (iOS 10.0.2 (14A456))</span><br><span class="line">iPad Pro 10.5”: 3057/4000/76% (iOS 11 beta4)</span><br><span class="line">iPad Pro 12.9” (2015): 3058/3999/76% (iOS 11.2.1)</span><br><span class="line">iPad Pro 12.9” (2017): 3057/3974/77% (iOS 11 beta4)</span><br><span class="line">iPad Pro 11.0” (2018): 2858/3769/76% (iOS 12.1)</span><br><span class="line">iPad Pro 12.9” (2018, 1TB): 4598/5650/81% (iOS 12.1)</span><br><span class="line">iPad 10.2: 1844/2998/62% (iOS 13.2.3)</span><br><span class="line">iPod touch 4th gen: 130MB/256MB/51% (iOS 6.1.1)</span><br><span class="line">iPod touch 5th gen: 286MB/512MB/56% (iOS 7.0)</span><br><span class="line">iPhone4: 325MB/512MB/63%</span><br><span class="line">iPhone4s: 286MB/512MB/56%</span><br><span class="line">iPhone5: 645MB/1024MB/62%</span><br><span class="line">iPhone5s: 646MB/1024MB/63%</span><br><span class="line">iPhone6: 645MB/1024MB/62% (iOS 8.x)</span><br><span class="line">iPhone6+: 645MB/1024MB/62% (iOS 8.x)</span><br><span class="line">iPhone6s: 1396MB/2048MB/68% (iOS 9.2)</span><br><span class="line">iPhone6s+: 1392MB/2048MB/68% (iOS 10.2.1)</span><br><span class="line">iPhoneSE: 1395MB/2048MB/69% (iOS 9.3)</span><br><span class="line">iPhone7: 1395/2048MB/68% (iOS 10.2)</span><br><span class="line">iPhone7+: 2040MB/3072MB/66% (iOS 10.2.1)</span><br><span class="line">iPhone8: 1364/1990MB/70% (iOS 12.1)</span><br><span class="line">iPhone X: 1392/2785/50% (iOS 11.2.1)</span><br><span class="line">iPhone XS: 2040/3754/54% (iOS 12.1)</span><br><span class="line">iPhone XS Max: 2039/3735/55% (iOS 12.1)</span><br><span class="line">iPhone XR: 1792/2813/63% (iOS 12.1)</span><br><span class="line">iPhone 11: 2068/3844/54% (iOS 13.1.3)</span><br><span class="line">iPhone 11 Pro Max: 2067/3740/55% (iOS 13.2.3)</span><br></pre></td></tr></table></figure>
+<p>由上数据，可以看到以 iPhone 11 Pro Max 为例，内存的最大空间为
+3740MB，应用可使用的最大空间为 2067MB，占了 55%。iOS
+的总内存空间虽然很有限，但 iOS
+给每个进程分配的虚拟内存空间还是非常大的。</p>
+<p>由上，iOS 对比桌面操作系统，同样使用了虚拟地址，没有使用 Swap
+内存交换机制，而是通过<strong>内存压缩机制（Compressed
+memory）</strong>来最大化利用内存。</p>
+<h3 id="ios-系统内存">iOS 系统内存</h3>
+<p>以下分析参考自苹果在 WWDC 2018 上的 Session：<a
+href="https://developer.apple.com/videos/play/wwdc2018/416/">416. iOS
+Memory Deep Dive</a></p>
+<p>在前面关于<strong>操作系统 CPU
+寻址方式</strong>中提到了内存采用了分段+分页的管理方式。具有 VM
+机制的操作系统，会对每个运行的进程创建一个<strong>虚拟地址空间</strong>，该空间的大小有操作系统决定。<strong>虚拟地址空间</strong>会被分为相同大小的块，这些块被称为
+<strong><code>内存页（Memory Page）</code></strong>。计算机处理器和它的内存管理单元（MMU）维护着一张将程序的虚拟地址空间映射到物理地址上的分页表（Page
+Table）。iOS 中虚拟内存和物理内存的分页大小都是 16KB。</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b902078f0d39dc9274bf.jpg/In3GzcqtwgmlMDe.jpg"
+alt="内存大小的计算方式" />
+<figcaption aria-hidden="true">内存大小的计算方式</figcaption>
+</figure>
+<p>iOS
+的<strong><code>内存页（Memory Page）</code></strong>主要分两类：Clean
+Page 和 Dirty Page。</p>
+<h4 id="clean-page">Clean Page</h4>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/e13e4f2b88d5790a3e96.jpg/v3mIA1cDxPnLyfG.jpg"
+alt="Clean Page" />
+<figcaption aria-hidden="true">Clean Page</figcaption>
+</figure>
+<p>对于一般的桌面操作系统，Clean Memory 是能够 Page Out 的部分。Page Out
+指将优先级低的内存数据交换到磁盘上，但 iOS 不支持 Swap，所以 Clean Page
+在 iOS 是指只能够被系统清理出内存且在需要时能重新加载数据的
+Page。包含的类型有：</p>
+<ul>
+<li>应用的二进制可执行文件</li>
+<li>Memory mapped
+files：<code>.jpg</code>、<code>.data</code>、<code>.modal</code>
+等文件。</li>
+<li>Frameworks* ：<code>_DATA_CONST</code>
+字段。需要主意的是：这个字段在创建的时候是 Clean Page
+类型的，但如果在程序运行起来时，我们对系统方法进行了
+Swizzling，就会把这个内存页变成 Dirty Page。</li>
+</ul>
+<h4 id="dirty-page">Dirty Page</h4>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b4c698064931640a30e2.jpg/T6g3AFxocj48Kd1.jpg"
+alt="Dirty Page" />
+<figcaption aria-hidden="true">Dirty Page</figcaption>
+</figure>
+<p>Dirty Page 指不能被系统回收的内存占用。包含的类型有：</p>
+<ul>
+<li>所有堆上的对象（如 malloc、Array、NSCache、UIViews、String）</li>
+<li>图片解析缓冲（如 CGRasterData、ImageIO）</li>
+<li>Frameworks（如 <code>_DATA</code>、<code>_DATA_DIRTY</code>）</li>
+</ul>
+<p>可以看到 Framework 既有 Clean Page，也有 Dirty Page。</p>
+<h4 id="compressed-memory">Compressed Memory</h4>
+<p>当内存紧张时，系统会将暂不访问的物理内存进行压缩，直到下一次访问的时候进行解压。例如当我们使用
+Dictionary 去缓存数据的时候，假设现在使用了 3
+页内存，当不访问的时候可能会被压缩为 1 页，再次使用到时候又会解压成 3
+页。如下图：</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/a53dbf4f41003c34e496.jpg/P1GsYMVLTXD73zZ.jpg"
+alt="Dictionary 压缩前后" />
+<figcaption aria-hidden="true">Dictionary 压缩前后</figcaption>
+</figure>
+<p>Compressed Memory 是一种用 CPU 时间换空间的方式。</p>
+<h4 id="内存警告">内存警告</h4>
+<p>当 App 收到内存警告时，苹果给出了一些关于内存警告的一些想法：</p>
+<ul>
+<li>并不是所有的内存警告都是 App 本身造成的。如使用 App
+的过程中接听到电话，也可能触发内存警告。</li>
+<li>内存压缩机制使得内存释放变得比较复杂。如前面 Dictinary
+的例子。假设我们收到内存警告，我们可能会决定将字典中的一些数据删除。在我们重新访问压缩后的
+Page 时，系统会先解压这块内存，Dictionary Page 就会从一个变为 3
+个；之后释放 Dictionary 所占的 Page；此时实际释放的 Page 还是 1
+个。因为操作过程中有一个解压的过程，很容易造成内存紧张的状态。</li>
+<li>不要一味的缓存，要找到 CPU
+计算和内存性能之间的平衡点。相比较使用字典缓存，苹果更推荐使用
+NSCache。NSCache
+分配的内存可以由系统自动释放，官方针对内存警告也做了优化。</li>
+</ul>
+<p>我们平时关心的内存占用其实是 Dirty Size 和 Compressed Size
+两部分，所以当我们想要优化内存时，尽量从这两部分入手。</p>
+<p>App 中内存占用（Memory Footprint）有一定的限制： -
+不同设备的内存限制不同 - App 都具有相当高的占用空间限制 - 提供给
+Extensions 内存比较少 - 如果内存超过了限制范围，App 会抛出
+<strong><code>EXC_RESOURCE_EXCEPTION</code></strong> 异常</p>
+<p>附带 Stackoverflow 上查找看到一份关于 iOS
+中单应用可用最大内存的测试报告（<a
+href="https://stackoverflow.com/a/15200855">iOS app maximum memory
+budget</a>）</p>
+<h3 id="ios-app-内存">iOS App 内存</h3>
+<p>iOS
+系统层面的内存，大多由系统自动完成。通常开发者讨论的内存管理，实际上是进程内部语言层面的内存管理。iOS
+中一个 App 对应一个进程。</p>
+<h4 id="app-内存空间">App 内存空间</h4>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/dcdcfb36153bac4759b7.png/GmokglS7Mr3C1vJ.png"
+alt="内存分区" />
+<figcaption aria-hidden="true">内存分区</figcaption>
+</figure>
+<p>内存分区按高地址到低地址依次为： - 栈区（Stack） - 堆区（Heap） -
+静态存储区（Static） - 常量区
+在程序中使用的常量（如常量字符串）存储在该区域。在程序结束后，由系统释放。
+- 代码区
+存放函数体的二进制代码。运行程序实际上是执行代码，代码要执行就需要先加载入内存。</p>
+<p>展开介绍下<code>栈区（Stack）</code>、<code>堆区（Heap）</code>和<code>静态存储区（Static）</code>。</p>
+<h5 id="栈区stack">栈区（Stack）</h5>
+<p>栈区中的变量由编译器负责分配和释放，内存随着函数的运行分配，随着函数的结束而释放，由系统自动完成。</p>
+<p>在执行函数时，函数内局部变量的存储单元（指非静态的局部变量，如：函数参数、在函数内所声明对象的指针等）都会在栈上进行创建，函数执行结束时（出作用域时），这些存储单元会被自动释放。栈区的内存分配运算内置于处理器的指令集中，效率很高，但是分配的内存容量是有限的，当系统的栈区大小不够分配时，系统会提示栈溢出。官方也给出了
+iOS 中栈空间的大小，子线程为 512KB，主线程为 1MB（<a
+href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/CreatingThreads/CreatingThreads.html">官方链接</a>），如下图：</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/e563acd58cce47ca72a4.jpg/1Ci4XNVDuAJ2lR9.jpg"
+alt="iOS 中栈区空间限制" />
+<figcaption aria-hidden="true">iOS 中栈区空间限制</figcaption>
+</figure>
+<p>栈是向低地址扩展的，是一块连续的内存区域，且栈顶的地址和栈的最大容量是由系统预先规定的，遵循
+FILO，不产生内存碎片。只要栈的剩余空间大于所申请空间，系统讲为程序提供内存；否则将报异常提示栈溢出。因此，能从栈获得的空间较小。开发过程中，需要留意的是：像大量的局部变量，深递归，函数循环调用都可能导致栈溢出而运行崩溃。</p>
+<h5 id="堆区heap">堆区（Heap）</h5>
+<p>堆区中的变量由开发者进行分配和释放。操作系统有一个记录空闲内存地址的链表，当系统收到程序的申请时，会遍历该链表，寻找第一个空间大于所申请空间的堆结点，然后将该结点从空闲结点链表中删除，并将该结点的空间分配给程序。大多系统，会在这块内存空间中的首地址处记录本次分配的大小，以使得内存空间释放时正确。另外，由于找到的空闲堆结点的大小不一定正好等于申请的大小，系统会自动的将多余的那部分重新放入空闲链表中。</p>
+<p>堆是向高地址扩展的，是不连续的内存区域。这是由于系统使用了链表来存储空闲的内存地址，而链表的遍历方向是由低地址向高地址。堆的大小由系统中有效虚拟内存决定。因此，堆的空间比较灵活，也比较大，由于堆的特性，也容易产生内存碎片，但用起来较为方便。</p>
+<h5 id="静态存储区static">静态存储区（Static）</h5>
+<p>这块内存在程序编译时就已经分配好，在程序的整个运行期间这块内存都会存在。它主要用来存放<strong><code>静态变量</code></strong>、<strong><code>全局变量</code></strong>和<strong><code>常量</code></strong>。事实上<strong><code>全局变量</code></strong>也是静态的，因此，也叫<strong><code>全局静态存储区</code></strong>。</p>
+<p><strong><code>静态存储区</code></strong>分为两部分： -
+数据区：<strong><code>全局变量</code></strong>和<strong><code>静态变量</code></strong>的存储是放在一起的，初始化的<strong><code>全局变量</code></strong>和<strong><code>静态变量</code></strong>存放在一块区域
+- BSS
+区：未初始化的<strong><code>全局变量</code></strong>和<strong><code>静态变量</code></strong>在相邻的另一块区域。</p>
+<p>在程序结束运行后，这块内存由系统释放。</p>
+<h2 id="引用计数">引用计数</h2>
+<p>移动端的内存管理技术，主要有 GC（Garbage Collection
+垃圾回收）的标记清楚算法和苹果使用的引用计数方法。</p>
+<p>早期的 iOS 开发通过手动引用计数（MRC - Mannul Reference
+Counting）的方式手动管理引用计数，由于 MRC 维护成本的原因，苹果在 2011
+年的 WWDC 提出了自动引用计数（ARC - Automatic Reference Countin）。ARC
+背后的原理是依赖编译器的静态分析能力，通过在编译时找出合理的位置插入引用计数管理代码。遵循谁申请谁释放的原则。虽然
+ARC
+帮助我们解决了引用计数大部分的问题，但开发过程中如果不留意会很容易出现类似循环引用而导致的内存泄露的问题。移动设备的内存资源是有限的，当
+App
+运行时占用的内存超过限制后，会被强制杀掉，用户体验会被极大降低。为了提升
+App 质量，开发者需要重视应用的内存管理问题。</p>
+<p>引用计数（Reference
+Count）是一种管理对象生命周期的方式。在创建一个新对象时，它的引用计数为
+1；每当该被引用时，它的引用计数
++1；每当引用该对象的对象释放时，它的引用计数 -1。当该对象的引用计数为 0
+时，说明该对象不再被任何对象使用，这时该对象会被销毁，内存回收。过程如下图：</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/a1058d1f53d4e3694e58.png/v3UIusgnDVSdcb7.png"
+alt="对象的引用计数" />
+<figcaption aria-hidden="true">对象的引用计数</figcaption>
+</figure>
+<p>一个需要主意的点：当对象被释放时，它的 retainCount 不一定为
+0。如下代码：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)testRetainCount &#123;</span><br><span class="line">    <span class="built_in">NSObject</span> *object = [[<span class="built_in">NSObject</span> alloc] init];</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;Reference Count = %u&quot;</span>, [object retainCount]);</span><br><span class="line">    [object release];</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@&quot;Reference Count = %u&quot;</span>, [object retainCount]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出结果如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Reference Count = 1</span><br><span class="line">Reference Count = 1</span><br></pre></td></tr></table></figure>
+<p>会发现 object 在 release 前后的引用计数都为 1。这是为什么？</p>
+<p>是因为当最后一次执行 release
+时，系统知道马上就要回收内存，没有必要再将 retainCount - 1。因为不管是否
+-1，该对象都确定会被回收，而对象被回收后，所在的内存区域包括 retainCount
+的值已经没有意义。这里不将 1 变为
+0，是为了减少一次内存写操作，进而加速对象的回收。</p>
+<p>ARC 虽然帮助开发者解决了 iOS 开发过程中绝大部分的内存管理问题，但底层
+Core Foundation 对象的部分不在 ARC
+的管理范围内，需要开发者自己维护这些对象的引用计数。</p>
+<h2 id="循环引用">循环引用</h2>
+<p>引用计数管理内存的方式是：当对象自己被销毁时，其成员变量引用计数
+-1。但如果出现下面的引用情况：</p>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/d0491f03c376635bf453.png/HYQmhOWGxsoFyV7.png"
+alt="相互持有对象" />
+<figcaption aria-hidden="true">相互持有对象</figcaption>
+</figure>
+<p>上图中，对象 A 持有对象 B，同时对象 B 也持有对象 A。在外界对对象 A
+和对象 B 没有其他任何引用的情况下，对象 A 若想释放，只能先释放对象
+B；但对象 B 若想释放，同样需要先释放对象
+A。这样就出现了循环引用（Reference Cycle）的问题。</p>
+<p>解决循环引用问题主要有两种方式：</p>
+<ul>
+<li>第一种是主动断开循环，通过置 nil 主动释放的方式</li>
+<li>第二种是通过使用弱引用</li>
+</ul>
+<p>弱引用虽然持有对象，但不会增加被持有对象的引用计数，这样就避免了循环引用的产生。弱引用用的比较多的场景比如：delegate
+模式的使用。</p>
+<figure>
+<img src="https://i.loli.net/2020/09/14/uCNqZEKrQhRnijS.png"
+alt="弱引用 Delegate" />
+<figcaption aria-hidden="true">弱引用 Delegate</figcaption>
+</figure>
+<p>如上图的例子，两个 ViewController。场景是 ViewController A 弹出
+ViewController B，在 ViewController B 做完一些操作后，将一些数据返回给
+ViewController A。这时，因为 delegate
+是弱引用，不会变更引用计数，这样就避免了循环引用的产生。</p>
+<h2 id="弱引用的实现原理">弱引用的实现原理</h2>
+<p>系统对于每一个有弱引用的对象，都维护了一个表来记录它所有弱引用的指针地址。当一个对象的引用计数为
+0 时，系统就通过这张表，找到所有的弱引用指针，继而把它们都置为 nil。</p>
+<p>更细节的关于弱引用的实现原理，后面会有单独的一篇来分析。</p>
+<h2 id="oom">OOM</h2>
+<p>OOM 是 Out of Memory 的缩写，指当 App 占用的内存达到了 iOS 系统对单个
+App 占用内存上限后会被系统强杀掉的现象。这是一种由 iOS 的 JetSam
+机制导致的一种“另类”崩溃，并且日志无法通过信号捕捉到。</p>
+<p>JetSam
+机制，指的是操作系统为了控制内存资源过度使用而采用的一种资源管控机制。</p>
+<p>在面对 OOM
+类问题时，会考虑到两个方面的问题。一方面是，如何知道系统对单个 App
+允许占用内存的上限值？另一方面是，如何定位
+OOM？依次来看下对应的解决方案。</p>
+<h3 id="如何获取内存上限值">如何获取内存上限值？</h3>
+<h4 id="jetsamevent-日志">JetsamEvent 日志</h4>
+<p>我们可以从<strong><code>设置 - 隐私 - 分析与改进</code></strong>这条路径看到系统的日志，找到以
+JetsamEvent
+开头的系统日志，我们可以通过隔空投送到电脑或直接在手机上查看这些日志内容。</p>
+<p>在这类系统日志中，查找崩溃原因时如果看到<code>"reason" : "pre-process-limit"</code>，则表示崩溃是由于
+App 占用的内存超过了系统对单个 App
+的内存限制。对应查找<code>"rpages"</code> 对应的值，这个值表示 App
+占用的内存页数量。</p>
+<p>日志内容的结构如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&quot;rpages&quot; : 89600,</span><br><span class="line">&quot;reason&quot; : &quot;per-process-limit&quot;,</span><br></pre></td></tr></table></figure>
+<p>通过 JetsamEvent 日志获取了内存页数量 rpages 为
+89600，只要再知道内存页大小的值，就可以计算出单个 App 的内存上限值。</p>
+<p>继续在 JetsamEvent 日志中查找以 <code>"pageSize"</code> 对应的值，为
+16384。通过下面的计算公式得到值为 1.4G。</p>
+<ul>
+<li>内存上限值 = pageSize * rpages / 1024 / 1024 MB</li>
+</ul>
+<p>JetsamEvent 日志是系统在杀掉 App
+后留在手机中的，属于系统级日志，存放在系统目录下，App
+上线后开发者是没有权限获得的。</p>
+<p>那么 iOS 是怎么监控内存压力的？</p>
+<p>iOS 系统会开启优先级最高的线程 <code>vm_pressure_monitor</code>
+来监控系统的内存压力情况，并通过一个堆栈来维护所有 App 的进程。此外，iOS
+系统还会维护一个内存快照表，用于保存每个进程内存页的消耗情况。</p>
+<p>当<code>vm_pressure_monitor</code>线程发现某 App 内存有压力了，会为该
+App 发送通知，也就是 <code>didReceiveMemoryWarnning</code>
+代理。通过这个代理，可以写需要的内存释放代码，以避免 App
+被系统强制杀死。</p>
+<p>iOS
+系统内核有一个数组，专门用于维护线程的优先级。优先级由高到低依次是：<strong>内核用线程的优先级
+&gt; 操作系统 &gt; 前台 App &gt; 后台运行 App</strong></p>
+<p>苹果考虑到手持设备存储空间有限，在 iOS 中去掉了
+Swap，这样虚拟内存就没办法记录到外部的存储上，进而苹果引入了
+MemoryStatus 机制。</p>
+<p>MemoryStatus 机制的主要思路是，在 iOS
+上弹出尽可能多的内存共当前应用使用。把这个机制落到优先级上，就是先强杀后台应用；如果内存还不够就强杀掉当前应用。MemoryStatus
+机制会开启一个 <code>memorystatus_jetsam_thread</code> 线程，这个线程和
+<code>vm_pressure_monitor</code>
+没有关系。<code>memorystatus_jetsam_thread</code>线程只负责强杀应用和记录日志，不会发送通知消息；<code>vm_pressure_monitor</code>线程也无法获取强杀应用的消息。</p>
+<p>除了内存过大的原因会被系统强杀，还有三种内存问题也会被强杀：</p>
+<ul>
+<li>访问未分配的内存。XNU 会报 EXC_BAD_ACCESS 错误，发出 SIGSEGV Signal
+#11 信号。这类报错绝大多数是由于对一个已经释放的对象进行 release
+操作造成的。</li>
+<li>访问已分配但未提交的内存。XNU
+会拦截分配物理内存，出现问题的线程分配内存页时会被冻结。</li>
+<li>没有遵守权限访问内存。内存页的权限标准类似 UNIX
+文件权限，如果对只读权限的内存页进行写入就会出错，XNU 发出 SIGSEGV
+Signal #7 信号。</li>
+</ul>
+<p>第一种和第三种问题可以通过崩溃信息获取到，在收集崩溃信息时如果是这两类，可以把内存分配的记录同时收集，用于分析不合理内存分配和优化。</p>
+<h4 id="通过-xnu-获取">通过 XNU 获取</h4>
+<p>XNU 中有专门用于获取内存上限值的函数和宏，可以通过
+<code>memorystatus_priority_entry</code>
+结构体得到进程的优先级和内存上限值。结构体中 priority
+表示进程的优先级；limit 表示进程的内存上限值。相关源码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取进程的 pid、优先级、状态、内存阈值等信息</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">memorystatus_priority_entry</span> &#123;</span></span><br><span class="line">    <span class="type">pid_t</span> pid;</span><br><span class="line">    <span class="type">int32_t</span> priority;</span><br><span class="line">    <span class="type">uint64_t</span> user_data;</span><br><span class="line">    <span class="type">int32_t</span> limit;</span><br><span class="line">    <span class="type">uint32_t</span> state;</span><br><span class="line">&#125; <span class="type">memorystatus_priority_entry_t</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">// 基于下面这些宏可以达到查询内存阈值等信息，也可以修改内存阈值等</span></span><br><span class="line"><span class="comment">/* Commands */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_GET_PRIORITY_LIST            1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_SET_PRIORITY_PROPERTIES      2</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_GET_JETSAM_SNAPSHOT          3</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_GET_PRESSURE_STATUS          4</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_SET_JETSAM_HIGH_WATER_MARK   5    <span class="comment">/* Set active memory limit = inactive memory limit, both non-fatal   */</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_SET_JETSAM_TASK_LIMIT        6    <span class="comment">/* Set active memory limit = inactive memory limit, both fatal   */</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_SET_MEMLIMIT_PROPERTIES      7    <span class="comment">/* Set memory limits plus attributes independently           */</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_GET_MEMLIMIT_PROPERTIES      8    <span class="comment">/* Get memory limits plus attributes                 */</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_PRIVILEGED_LISTENER_ENABLE   9    <span class="comment">/* Set the task&#x27;s status as a privileged listener w.r.t memory notifications  */</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_PRIVILEGED_LISTENER_DISABLE  10   <span class="comment">/* Reset the task&#x27;s status as a privileged listener w.r.t memory notifications  */</span></span></span><br><span class="line"><span class="comment">/* Commands that act on a group of processes */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORYSTATUS_CMD_GRP_SET_PROPERTIES           100</span></span><br></pre></td></tr></table></figure>
+<p>XNU 详细相关源码链接： - <a
+href="https://opensource.apple.com/source/xnu/xnu-3248.20.55/bsd/sys/kern_memorystatus.h.auto.html">kern_memorystatus.h</a>
+- <a
+href="https://opensource.apple.com/source/xnu/xnu-3789.70.16/bsd/kern/kern_memorystatus.c.auto.html">kern_memorystatus.c</a></p>
+<p>通过 XNU 宏获取内存限制，需要越狱来获取 root
+权限，正常情况下开发者看不到这些信息。</p>
+<h4 id="通过内存警告获取">通过内存警告获取</h4>
+<p>前面提到内存警告时，系统的内存监控线程会给相关 App
+发送通知<code>didReceiveMemoryWarnning</code>。我们可以利用这个内存压力代理事件来动态获取内存上限值。系统在强制杀死
+App 前会有 6s 的时间，这段时间足够我们获取记录内存信息。iOS
+系统提供了一个 <code>task_info</code>
+函数，我们可以在发生内存警告时，通过 <code>task_info_t</code> 结构内的
+<code>resident_size</code> 字段获取当前 App
+占用了多少内存。具体代码如下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#import <span class="string">&lt;mach/mach.h&gt;</span></span></span><br><span class="line">- (int64_t)memoryUsage &#123;</span><br><span class="line">    int64_t memoryUsageInByte = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">struct</span> task_basic_info taskBasicInfo;</span><br><span class="line">    mach_msg_type_number_t size = <span class="keyword">sizeof</span>(taskBasicInfo);</span><br><span class="line">    kern_return_t kernelReturn = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &amp;taskBasicInfo, &amp;size);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span>(kernelReturn == KERN_SUCCESS) &#123;</span><br><span class="line">        memoryUsageInByte = (int64_t) taskBasicInfo.resident_size;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@&quot;Memory in use (in bytes): %lld&quot;</span>, memoryUsageInByte);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@&quot;Error with task_info(): %s&quot;</span>, mach_error_string(kernelReturn));</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> memoryUsageInByte;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>但测试的时候，我们会发现计算出的值跟 Instruments
+里看到的内存大小不一致，甚至相差及时
+MB。resident_size（驻留内存）确实无法反映真实的物理内存，而且 Xcode 的
+Debug Gauge 使用的也是 <code>phys_footprint</code>，这点从 WebKit 和 XNU
+的源码可以佐证。</p>
+<p><a
+href="https://github.com/WebKit/webkit/blob/52bc6f0a96a062cb0eb76e9a81497183dc87c268/Source/WTF/wtf/cocoa/MemoryFootprintCocoa.cpp">WebKit
+相关源码</a>： <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">size_t</span> <span class="title">memoryFootprint</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="type">task_vm_info_data_t</span> vmInfo;</span><br><span class="line">    <span class="type">mach_msg_type_number_t</span> count = TASK_VM_INFO_COUNT;</span><br><span class="line">    <span class="type">kern_return_t</span> result = <span class="built_in">task_info</span>(<span class="built_in">mach_task_self</span>(), TASK_VM_INFO, (<span class="type">task_info_t</span>) &amp;vmInfo, &amp;count);</span><br><span class="line">    <span class="keyword">if</span> (result != KERN_SUCCESS)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">static_cast</span>&lt;<span class="type">size_t</span>&gt;(vmInfo.phys_footprint);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><a
+href="https://github.com/apple/darwin-xnu/blob/0a798f6738bc1db01281fc08ae024145e84df927/bsd/kern/kern_memorystatus.c">XNU
+源码</a>中 JetSam 判断应用内存是否使用过大也是使用的
+<code>phys_footprint</code>。WWDC 2018 Session <a
+href="https://developer.apple.com/videos/play/wwdc2018/416">iOS Memory
+Deep Dive</a> 对 <code>footprint</code> 这块也有介绍。</p>
+<p>贴近 JetSam 机制，更准确的内存计算方式应该是通过
+<code>phys_footprint</code>:</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#import <span class="string">&lt;mach/mach.h&gt;</span></span></span><br><span class="line">- (int64_t)memoryUsage &#123;</span><br><span class="line">    int64_t memoryUsageInByte = <span class="number">0</span>;</span><br><span class="line">    task_vm_info_data_t vmInfo;</span><br><span class="line">    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;</span><br><span class="line">    kern_return_t kernelReturn = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &amp;vmInfo, &amp;count);</span><br><span class="line">    <span class="keyword">if</span>(kernelReturn == KERN_SUCCESS) &#123;</span><br><span class="line">        memoryUsageInByte = (int64_t) vmInfo.phys_footprint;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@&quot;Memory in use (in bytes): %lld&quot;</span>, memoryUsageInByte);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@&quot;Error with task_info(): %s&quot;</span>, mach_error_string(kernelReturn));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> memoryUsageInByte;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="如何定位-oom">如何定位 OOM?</h3>
+<p>OOM 分为两大类，Foreground OOM / Background OOM，即 FOOM 和
+BOOM。其中 FOOM 是指 App
+在前台因消耗内存过多引起系统强杀。对用户而言，表现跟 crash 一样。</p>
+<p>现在主流的 OOM 检测库有两个： - <a
+href="https://github.com/facebook/FBAllocationTracker">FBAllocationTracker</a>
+- <a href="https://github.com/Tencent/OOMDetector">OOMDetector</a></p>
+<p>Facebook 早在 2015 年 8 月提出 FOOM
+检测办法，大致原理是排除各种情况后，剩余的情况是 FOOM，原文：<a
+href="https://engineering.fb.com/ios/reducing-fooms-in-the-facebook-ios-app/">Reducing
+FOOMs in the Facebook iOS app</a>。可以使用 Facebook 的 <a
+href="https://github.com/facebook/FBAllocationTracker">FBAllocationTracker</a>
+工具监控 OC 对象分配，用 fishhook 工具 hook malloc/free
+等接口监控堆内存分配，每隔 1 秒，把当前所有 OC 对象个数、TOP 200
+最大堆内存及其分配堆栈，用文本 log 输出到本地。</p>
+<p>这个方案的不足点：</p>
+<ul>
+<li>监控粒度不够细，像大量分配小内存引起的质变无法监控，另外 fishhook
+只能 hook 自身 app 的 C 接口调用，对系统库不起作用；</li>
+<li>打 log
+间隔不好控制，间隔过长可能丢失中间峰值情况，间隔过短会引起耗电、I/O
+频繁等性能问题；</li>
+<li>上报的原始 log 靠人工分析，缺少好的页面工具展现和归类问题。</li>
+</ul>
+<p>在这之后微信开源了 <a
+href="https://github.com/Tencent/OOMDetector">OOMDetector</a>，使用了更底层的
+<code>malloc_logger_t</code>
+记录当前存活对象的内存分配信息（包括分配大小和分配堆栈）。分配堆栈可以用
+backtrace 函数捕获，但捕获到的地址是虚拟内存地址，不能从符号表 dsym
+解析符号。所以还要记录每个 image 加载时的偏移
+slide，这样<strong>符号表地址=堆栈地址-slide</strong>。另外，还做了数据归类。具体的实现方案可以查看原文：<a
+href="https://wetest.qq.com/lab/view/367.html">iOS微信内存监控</a></p>
+<h2 id="oom-常见问题">OOM 常见问题</h2>
+<h3 id="uigraphicsendimagecontext">UIGraphicsEndImageContext</h3>
+<p>UIGraphicsBeginImageContext 和 UIGraphicsEndImageContext
+必须成双出现，不然会造成 context 泄漏。另外 Xcode 的 Analyze
+也能扫出这类问题。</p>
+<h3 id="uiwebview">UIWebView</h3>
+<p>无论是打开网页，还是执行一段简单的 js 代码，UIWebView 都会占用 App
+大量内存。而 WKWebView
+不仅有出色的渲染性能，且有自己独立进程，一些网页相关的内存消耗移到自身进程里，最适合取替
+UIWebView。</p>
+<h3 id="autoreleasepool">autoreleasepool</h3>
+<p>通常 autoreleased 对象是在 runloop 结束时才释放。如果在循环里产生大量
+autoreleased 对象，内存峰值会猛涨，甚至出现 OOM。适当的添加
+autoreleasepool 能及时释放内存，降低峰值。</p>
+<h3 id="互相引用">互相引用</h3>
+<p>比较容易出现互相引用的地方是 block 里使用了 self，而 self 又持有这个
+block，只能通过代码规范来避免。另外 NSTimer 的 target、CAAnimation 的
+delegate，是对 Object 强引用。</p>
+<h3 id="大图片压缩">大图片压缩</h3>
+<p>当我们在缩小一幅图像的时候，会按照取平均值的办法把多个像素点变成一个像素点，这个过程称为
+<code>Downsampling</code>。通常图片缩放接口可以如下写法：</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/6fea8de4263822575352.png/egZGq8j2vNoIdlO.png" /></p>
+<p>但处理大分辨率图片时，往往容易出现 OOM，原因是
+<code>-[UIImage drawInRect:]</code>
+在绘制时，先解码图片，再生成原始分辨率大小的
+bitmap，这是很消耗内存。解决方法是使用更底层的 <code>ImageIO</code>
+接口，它可以直接读取图像大小和元数据信息，不会带来额外的内存开销。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/5ac66d5b10a17fa72db3.png/EnCVrcjPLiM5Hwg.png" /></p>
+<h3 id="大图加载显示">大图加载显示</h3>
+<p><a href="https://developer.apple.com/videos/play/wwdc2018/416/">WWDC
+2018 Session 416：iOS Memory Deep Dive</a>提出建议使用
+<code>UIGraphicsImageRenderer</code> 代替
+<code>UIGraphicsBeginImageContextWithOptions</code>， 该方法从 iOS 10
+引入了，在 iOS 12
+上会自动选择最佳的图片格式，可以减少很多内存。如果想修改颜色，可以直接修改
+tintColor，不会有额外的内存开销。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/6395d89661731dbe0c46.png/5sB8VbmaoDzWJYF.png" /></p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/ea37043b9c82f5b187c8.png/m8KDjyH7We2CvQ5.png" /></p>
+<blockquote>
+<p>图片在 iOS 上的显示原理：<a
+href="https://developer.apple.com/videos/play/wwdc2018/219/">WWDC 2018
+Session 219：Image and Graphics Best Practices</a> 对应的翻译文稿：<a
+href="https://juejin.im/post/6844903618429059086">《WWDC2018
+图像最佳实践》</a></p>
+</blockquote>
+<h3 id="大图切换前后台时的优化">大图切换前后台时的优化</h3>
+<p>假设在 App
+里展示了一张很大的图片，当我们切换到后台去做其它的操作时，这个图片还在占用内存。我们应该考虑在合适的时机去回收这类占用过大的数据。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/58b98c0cca99e6005aa9.png/3eovruaADx9OtRQ.png" /></p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/f860bb5c70726ccd4dc6.png/Hn9qeN8Gt7sPjyA.png" /></p>
+<h3 id="大视图">大视图</h3>
+<p>大视图是指 View 的 size
+过大，自身包含要渲染的内容。超长文本如常见的炸群消息，通常几千甚至几万行。如果把它绘制到同一个
+View
+里，那将会消耗大量内存，同时造成严重卡顿。最好做法是把文本划分成多个
+View 绘制，利用 TableView 的复用机制，减少不必要的渲染和内存占用。</p>
+<h2 id="内存检测工具">内存检测工具</h2>
+<p>列出一些内存分析的工具：</p>
+<h3 id="xcode-memory-gauge">Xcode Memory Gauge</h3>
+<p>在 Xcode 中，你可以通过 <code>Memory Gauge</code> 工具，快速查看 App
+运行时的内存情况，包括内存最高占用、最低占用，以及在所有进程中的占用比例等。如果想要查看更详细的数据，就需要用到
+<code>Instruments</code> 了。</p>
+<h3 id="instruments">Instruments</h3>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/651b352b5793f4208660.jpg/CDbBw261f8Tk4jq.jpg" /></p>
+<p>在 Instruments 中，你可以使用 Allocations、Leaks、VM Tracker 和
+Virtual Memory Trace 对 App 进行多维度分析。</p>
+<ul>
+<li><p>Allocations：可以查看虚拟内存占用、堆信息、对象信息、调用栈信息，VM
+Regions
+信息等。可以利用这个工具分析内存，并针对地进行代码优化。</p></li>
+<li><p>Leaks：用于检测内存泄漏。</p></li>
+<li><p>VM Tracker：可以查看内存占用信息，查看各类型内存的占用情况，比如
+dirty memory 的大小等等，可以辅助分析内存过大、内存泄漏等原因。</p></li>
+<li><p>Virtual Memory Trace：有内存分页的具体信息，具体可以参考 <a
+href="https://developer.apple.com/videos/play/wwdc2016/411/">WWDC 2016 -
+Syetem Trace in Depth</a>。</p></li>
+</ul>
+<h3 id="debug-debugger---memory-resource-exceptions">Debug Debugger -
+Memory Resource Exceptions</h3>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/e699e9ffea864e9b79df.jpg/B4QRZi1rjYfHA82.jpg" /></p>
+<p>当使用 Xcode 10 以前的版本进行调试时，在内存过大时，debug session
+会直接终止，并且在控制台打印出异常。从 Xcode 10 开始，debugger
+会自动捕获 EXC_RESOURCE RESOURCE_TYPE_MEMORY
+异常，并断点在触发异常抛出的地方，十分方便定位问题。</p>
+<h3 id="xcode-memory-debugger">Xcode Memory Debugger</h3>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/cd3cec53cbb0debef28c.jpg/VSiODU2dQFC3Wj4.jpg" /></p>
+<p>通过这个工具，可以直观地查看内存中所有对象的内存使用情况，对象相互间的依赖关系，对定位那些因为循环引用导致的内存泄露问题十分有帮助。
+我们也可以点击 <code>File -&gt; Export Memory Graph</code> 将其导出为
+memgraph 文件，在命令行中使用 Developer Tool
+对其进行分析。使用这种方式，我们可以在任何时候对过去某时的 App
+内存使用进行分析。</p>
+<h3 id="vmmap">vmmap</h3>
+<p>用于查看虚拟内存。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看详细报告</span></span><br><span class="line">vmmap App.memgraph</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看摘要报告</span></span><br><span class="line">vmmap --summary App.memgraph</span><br><span class="line"></span><br><span class="line"><span class="comment"># vmmap and AWK 查看所有动态库的Ditry Pages的总和</span></span><br><span class="line">vmmap -pages PlanetPics.memgraph | grep <span class="string">&#x27;.dylib&#x27;</span> | awk <span class="string">&#x27;&#123;sum += $6&#125; END &#123; print &quot;Total Dirty Pages:&quot;sum&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看vmmap的文档</span></span><br><span class="line">man vmmap</span><br></pre></td></tr></table></figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/4101ca15d6ecf90e9e3e.jpg/7rxQh6R1a8PNjU3.jpg"
+alt="vmmap App.memgraph" />
+<figcaption aria-hidden="true">vmmap App.memgraph</figcaption>
+</figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/c2b0efa3d8e33cbb6201.jpg/BcIjiVXNEHxOen3.jpg"
+alt="vmmap --summary App.memgraph" />
+<figcaption aria-hidden="true">vmmap --summary App.memgraph</figcaption>
+</figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/92c5cea0428600c40e12.jpg/gQR4JEojBHMKcOr.jpg"
+alt="vmmap -pages PlanetPics.memgraph | grep &#39;.dylib&#39; | awk &#39;{sum += $6} END { print &quot;Total Dirty Pages:&quot;sum}&#39;" />
+<figcaption aria-hidden="true">vmmap -pages PlanetPics.memgraph | grep
+'.dylib' | awk '{sum += $6} END { print "Total Dirty
+Pages:"sum}'</figcaption>
+</figure>
+<h3 id="leaks">leaks</h3>
+<p>用于查看泄露的内存。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看是否有内存泄露</span></span><br><span class="line">leaks MyApp.memgraph</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 leaks 的文档</span></span><br><span class="line">man leaks</span><br></pre></td></tr></table></figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/54cd0a43e02af3577397.jpg/d8qOi4Nyu7kKxoL.jpg"
+alt="leaks MyApp.memgraph" />
+<figcaption aria-hidden="true">leaks MyApp.memgraph</figcaption>
+</figure>
+<h3 id="heap">heap</h3>
+<p>查看堆区内存。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看所有堆区对象的内存使用</span></span><br><span class="line">heap App.memgraph</span><br><span class="line"></span><br><span class="line"><span class="comment"># 默认情况下是按照对象数量进行排序，通常情况下它们不会造成什么内存问题。</span></span><br><span class="line"><span class="comment"># 我们更关心的那些为数不多但占用大量内存的对象</span></span><br><span class="line"><span class="comment"># 参数 -sortBySize，按照内存占用大小顺序来查看所有堆区对象的内存使用</span></span><br><span class="line">heap App.memgraph -sortBySize</span><br><span class="line"></span><br><span class="line"><span class="comment"># 当确定是哪个类型的对象占用了太多内存之后，可以得到每个对象的内存地址</span></span><br><span class="line">heap App.memgraph -addresses all | &lt;classes-pattern&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 heap 的文档</span></span><br><span class="line">man heap</span><br></pre></td></tr></table></figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/f1d3f2241ea1ac2c01ba.jpg/LEYjbD7zI9vA2PQ.jpg"
+alt="heap App.memgraph -sortBySize" />
+<figcaption aria-hidden="true">heap App.memgraph
+-sortBySize</figcaption>
+</figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/e81f7edf616ec46726f7.jpg/htz4MHnWjuOgsFm.jpg"
+alt="heap App.memgraph -addresses all | " />
+<figcaption aria-hidden="true">heap App.memgraph -addresses all |
+<classes-pattern></figcaption>
+</figure>
+<h3 id="enabling-malloc-stack-logging">Enabling Malloc Stack
+Logging</h3>
+<p>在 <strong>Product -&gt; Scheme -&gt; Edit Scheme -&gt;
+Diagnostics</strong> 中，开启 <strong>Malloc Stack</strong>
+功能，建议使用 <strong>Live Allocations Only</strong> 选项。之后 lldb
+会记录调试过程中对象创建的堆栈，配合 malloc_history
+工具，就可以定位到那些占用了过大内存的对象是哪里创建的。</p>
+<p><img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/5ca0e5eb0749ef021f2b.jpg/soVWiYbZBxQ9j7e.jpg" /></p>
+<h3 id="malloc_history">malloc_history</h3>
+<p>查看内存分配历史。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看内存分配历史</span></span><br><span class="line">malloc_history App.memgraph [address]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看文档</span></span><br><span class="line">man malloc_history</span><br></pre></td></tr></table></figure>
+<figure>
+<img
+src="https://lc-gluttony.s3.amazonaws.com/9zYt4jSanPYX/b54804489d5c94e9f393.jpg/gn9PbhJxAtj5DVO.jpg"
+alt="malloc_history App.memgraph [address]" />
+<figcaption aria-hidden="true">malloc_history App.memgraph
+[address]</figcaption>
+</figure>
+<blockquote>
+<p>参考文章： - <a href="https://juejin.im/post/6844903902169710600">iOS
+Memory 内存详解</a> - <a
+href="https://zhuanlan.zhihu.com/p/92286186">存储器层次结构</a> - <a
+href="https://blog.csdn.net/qq_21792169/article/details/82956472">浅谈CPU寻址内存机制</a>
+- <a
+href="https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html#//apple_ref/doc/uid/20001880-BCICIHAB">Memory
+Usage Performance Guidelines</a> - <a
+href="https://blog.devtang.com/2016/07/30/ios-memory-management/">理解
+iOS 的内存管理</a> - <a
+href="https://wetest.qq.com/lab/view/367.html">iOS微信内存监控</a> - <a
+href="https://juejin.im/post/6844903621276991502">WWDC 2018：iOS
+内存深入研究</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2018/416/">WWDC 2018
+Session 416：iOS Memory Deep Dive</a></p>
+</blockquote>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2020/06/28/2020-06-28-configure-and-link-appClips/" title="WWDC20 10146 - App Clips 的配置及链接处理">
+                    <div class="nextTitle">WWDC20 10146 - App Clips 的配置及链接处理</div>
+                </a>
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2019/12/15/2019-12-15-ios-speed/" title="iOS 启动速度优化调研">
+                    <div class="prevTitle">iOS 启动速度优化调研</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1586275200000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E8%88%AC%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%86%85%E5%AD%98%E6%9C%BA%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">一般操作系统的内存机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%AF%E8%AF%BA%E4%BC%8A%E6%9B%BC%E7%BB%93%E6%9E%84"><span class="toc-number">1.1.</span> <span class="toc-text">冯·诺伊曼结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AD%98%E5%82%A8%E5%99%A8%E7%9A%84%E5%A4%9A%E7%BA%A7%E7%BC%93%E5%AD%98"><span class="toc-number">1.2.</span> <span class="toc-text">存储器的多级缓存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98"><span class="toc-number">1.3.</span> <span class="toc-text">虚拟内存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#cpu-%E5%AF%BB%E5%9D%80%E6%96%B9%E5%BC%8F"><span class="toc-number">1.4.</span> <span class="toc-text">CPU 寻址方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#swap-%E5%86%85%E5%AD%98%E4%BA%A4%E6%8D%A2%E6%9C%BA%E5%88%B6swap-inout"><span class="toc-number">1.5.</span> <span class="toc-text">Swap 内存交换机制（Swap
+In&#x2F;Out）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ios-%E7%9A%84%E5%86%85%E5%AD%98%E6%9C%BA%E5%88%B6"><span class="toc-number">2.</span> <span class="toc-text">iOS 的内存机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ios-%E5%AF%B9%E6%AF%94%E6%A1%8C%E9%9D%A2%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F"><span class="toc-number">2.1.</span> <span class="toc-text">iOS 对比桌面操作系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ios-%E7%B3%BB%E7%BB%9F%E5%86%85%E5%AD%98"><span class="toc-number">2.2.</span> <span class="toc-text">iOS 系统内存</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#clean-page"><span class="toc-number">2.2.1.</span> <span class="toc-text">Clean Page</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#dirty-page"><span class="toc-number">2.2.2.</span> <span class="toc-text">Dirty Page</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#compressed-memory"><span class="toc-number">2.2.3.</span> <span class="toc-text">Compressed Memory</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E8%AD%A6%E5%91%8A"><span class="toc-number">2.2.4.</span> <span class="toc-text">内存警告</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ios-app-%E5%86%85%E5%AD%98"><span class="toc-number">2.3.</span> <span class="toc-text">iOS App 内存</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#app-%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4"><span class="toc-number">2.3.1.</span> <span class="toc-text">App 内存空间</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E6%A0%88%E5%8C%BAstack"><span class="toc-number">2.3.1.1.</span> <span class="toc-text">栈区（Stack）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%A0%86%E5%8C%BAheap"><span class="toc-number">2.3.1.2.</span> <span class="toc-text">堆区（Heap）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E9%9D%99%E6%80%81%E5%AD%98%E5%82%A8%E5%8C%BAstatic"><span class="toc-number">2.3.1.3.</span> <span class="toc-text">静态存储区（Static）</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0"><span class="toc-number">3.</span> <span class="toc-text">引用计数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BE%AA%E7%8E%AF%E5%BC%95%E7%94%A8"><span class="toc-number">4.</span> <span class="toc-text">循环引用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%B1%E5%BC%95%E7%94%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="toc-number">5.</span> <span class="toc-text">弱引用的实现原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#oom"><span class="toc-number">6.</span> <span class="toc-text">OOM</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E8%8E%B7%E5%8F%96%E5%86%85%E5%AD%98%E4%B8%8A%E9%99%90%E5%80%BC"><span class="toc-number">6.1.</span> <span class="toc-text">如何获取内存上限值？</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#jetsamevent-%E6%97%A5%E5%BF%97"><span class="toc-number">6.1.1.</span> <span class="toc-text">JetsamEvent 日志</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%80%9A%E8%BF%87-xnu-%E8%8E%B7%E5%8F%96"><span class="toc-number">6.1.2.</span> <span class="toc-text">通过 XNU 获取</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%80%9A%E8%BF%87%E5%86%85%E5%AD%98%E8%AD%A6%E5%91%8A%E8%8E%B7%E5%8F%96"><span class="toc-number">6.1.3.</span> <span class="toc-text">通过内存警告获取</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E5%AE%9A%E4%BD%8D-oom"><span class="toc-number">6.2.</span> <span class="toc-text">如何定位 OOM?</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#oom-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="toc-number">7.</span> <span class="toc-text">OOM 常见问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#uigraphicsendimagecontext"><span class="toc-number">7.1.</span> <span class="toc-text">UIGraphicsEndImageContext</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#uiwebview"><span class="toc-number">7.2.</span> <span class="toc-text">UIWebView</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#autoreleasepool"><span class="toc-number">7.3.</span> <span class="toc-text">autoreleasepool</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%92%E7%9B%B8%E5%BC%95%E7%94%A8"><span class="toc-number">7.4.</span> <span class="toc-text">互相引用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%A7%E5%9B%BE%E7%89%87%E5%8E%8B%E7%BC%A9"><span class="toc-number">7.5.</span> <span class="toc-text">大图片压缩</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%A7%E5%9B%BE%E5%8A%A0%E8%BD%BD%E6%98%BE%E7%A4%BA"><span class="toc-number">7.6.</span> <span class="toc-text">大图加载显示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%A7%E5%9B%BE%E5%88%87%E6%8D%A2%E5%89%8D%E5%90%8E%E5%8F%B0%E6%97%B6%E7%9A%84%E4%BC%98%E5%8C%96"><span class="toc-number">7.7.</span> <span class="toc-text">大图切换前后台时的优化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%A7%E8%A7%86%E5%9B%BE"><span class="toc-number">7.8.</span> <span class="toc-text">大视图</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E6%A3%80%E6%B5%8B%E5%B7%A5%E5%85%B7"><span class="toc-number">8.</span> <span class="toc-text">内存检测工具</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#xcode-memory-gauge"><span class="toc-number">8.1.</span> <span class="toc-text">Xcode Memory Gauge</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#instruments"><span class="toc-number">8.2.</span> <span class="toc-text">Instruments</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#debug-debugger---memory-resource-exceptions"><span class="toc-number">8.3.</span> <span class="toc-text">Debug Debugger -
+Memory Resource Exceptions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xcode-memory-debugger"><span class="toc-number">8.4.</span> <span class="toc-text">Xcode Memory Debugger</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#vmmap"><span class="toc-number">8.5.</span> <span class="toc-text">vmmap</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#leaks"><span class="toc-number">8.6.</span> <span class="toc-text">leaks</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#heap"><span class="toc-number">8.7.</span> <span class="toc-text">heap</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#enabling-malloc-stack-logging"><span class="toc-number">8.8.</span> <span class="toc-text">Enabling Malloc Stack
+Logging</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#malloc_history"><span class="toc-number">8.9.</span> <span class="toc-text">malloc_history</span></a></li></ol></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>

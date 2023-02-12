@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="default">
+    <!-- title -->
+
+
+    
+
+<!-- keywords -->
+
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="JonyFang">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="JonyFang">
+    
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    
+    <meta name="description" content="">
+    <meta name="description" content="视频链接: WWDC 2020 - Configure and link your app clips。  本篇介绍了 App Clips 链接处理所需要知道的所有内容。 App Clips通过最简化的方式，为你的用户提供了一个体验应用程序的入口。当你的用户需要 App 的具体功能来处理某项操作时，App Clips 会通过 deep-linked 的方式无缝将 App 的具体模块呈现给用户。本">
+<meta property="og:type" content="article">
+<meta property="og:title" content="WWDC20 10146 - App Clips 的配置及链接处理">
+<meta property="og:url" content="http://example.com/2020/06/28/2020-06-28-configure-and-link-appClips/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="视频链接: WWDC 2020 - Configure and link your app clips。  本篇介绍了 App Clips 链接处理所需要知道的所有内容。 App Clips通过最简化的方式，为你的用户提供了一个体验应用程序的入口。当你的用户需要 App 的具体功能来处理某项操作时，App Clips 会通过 deep-linked 的方式无缝将 App 的具体模块呈现给用户。本">
+<meta property="og:locale">
+<meta property="article:published_time" content="2020-06-27T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-06-27T16:00:00.000Z">
+<meta property="article:author" content="JonyFang">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="WWDC">
+<meta property="article:tag" content="App Clips">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/assets/favicon.ico">
+    
+    <title>WWDC20 10146 - App Clips 的配置及链接处理 · JonyFang&#39;s Studio</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .back-top,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(-45deg, #444 0, #444 80px, #333 80px, #333 160px);
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link rel="preload" href="/css/style.css?v=20230211" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/dark.css?v=20230211" as="style">
+    <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/mobile.css?v=20230211" media="(max-width: 960px)">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js?v=20230211" as="script">
+    <link rel="preload" href="/scripts/dark.js?v=20230211" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    
+    <!-- 百度统计  -->
+    
+    <!-- 谷歌统计  -->
+    
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+</head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+    
+        <body class="post-body">
+    
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        
+            <div class="header-sidebar-menu">
+        
+            
+                <div style="padding-left: 1px;">&#xe775;</div>
+            
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href=/>JonyFang's Studio.</a>
+        </span>
+    </div>
+    <!-- toggle banner for post layout -->
+    
+        
+            <div class="banner">
+        
+            <div class="blog-title header-element">
+                <a href="/">JonyFang&#39;s Studio.</a>
+            </div>
+            <div class="post-title header-element">
+                <a href="#" class="post-name">WWDC20 10146 - App Clips 的配置及链接处理</a>
+            </div>
+        </div>
+    
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- back to top button -->
+    <div class="footer-fixed-element">
+        
+            <div class="back-top back-top-hidden">
+        
+        
+            <div>&#xe639;</div>
+        
+        </div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="
+
+
+
+
+
+
+
+    height:50vh;
+
+">
+    
+    <!-- 主页  -->
+    
+        
+    <!-- 404页  -->
+    
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.jpg)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+            
+                WWDC20 10146 - App Clips 的配置及链接处理
+            <!-- 404 -->
+            
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            
+                
+            <!-- 404 -->
+            
+        </p>
+        <!-- 文章页 meta -->
+        
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                
+                    <div class= post-intro-tags >
+    
+        
+        
+            
+        
+            
+        
+        
+        <span class="post-category" data-categories="iOS/WWDC"">
+            <i class="fas fa-folder post-category-icon"></i>
+            <span class="post-category-text">
+                iOS/WWDC
+            </span>
+        </span>
+    
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="iOS">iOS</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="WWDC">WWDC</a>
+    
+        <a class="post-tag" href="javascript:void(0);" data-tags="App Clips">App Clips</a>
+    
+</div>
+
+                
+                <!-- 文章字数统计 -->
+                
+                    <div class="post-intro-read">
+                        <span>字数统计: <span class="post-count word-count">4.3k</span>阅读时长: <span class="post-count reading-time">16 min</span></span>
+                    </div>
+                
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2020/06/28</span>
+                    <!-- busuanzi -->
+                    
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" />
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <blockquote>
+<p>视频链接: <a
+href="https://developer.apple.com/videos/play/wwdc2020/10146/">WWDC 2020
+- Configure and link your app clips</a>。</p>
+</blockquote>
+<p>本篇介绍了 <code>App Clips</code> 链接处理所需要知道的所有内容。
+<code>App Clips</code>通过最简化的方式，为你的用户提供了一个体验应用程序的入口。当你的用户需要
+App 的具体功能来处理某项操作时，<code>App Clips</code> 会通过
+<code>deep-linked</code> 的方式无缝将 App
+的具体模块呈现给用户。本篇会介绍 <code>App Clip</code>
+内链接的处理和配置链接所需的操作。</p>
+<span id="more"></span>
+<h2 id="前言">1.前言</h2>
+<p>本篇内容结构： <img
+src="https://images.xiaozhuanlan.com/photo/2020/975ffdd236dffaf2177a32dd3ee982c3.png" /></p>
+<p>首先，让我们通过一个示例，来看下如何通过一个 <code>App Clip</code>
+来完成一个具体的功能处理。</p>
+<h2 id="app-clip-应用示例---订购冰沙">2.App Clip 应用示例 -
+订购冰沙🍧</h2>
+<p>[00:49] <img
+src="https://images.xiaozhuanlan.com/photo/2020/1ac178171456fc4dd673da8fb72929fe.png" />￼
+想象着你现在在经过一个冰沙摊。你想要来一份冷冰沙。这时，你发现了一个带有标语的
+<code>NFC</code> 标签，上面写着“贴近此处订购”。你按照提示将手机贴近了
+<code>NFC</code> 标签，之后在你的 iPhone
+屏幕的底部会弹出一个卡片，上面写着购买沙冰的一些简短说明，而这个卡片即是我们要介绍的
+<code>App Clip</code>。当你按照卡片的提示，点击了上面的“打开”按钮后，将在手机上启动
+<code>App Clip</code>
+的订购处理，这个处理会将你直接带到冰沙的订购页面。之后，你通过 Apple Pay
+完成支付，成功买到了冰沙。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/b4002385b34f7fd66286bb75d14c6b97.png" />
+上述购买冰沙的这一过程，即发生了购买的关联处理。
+我们从程序的角度来看下这一过程是怎样的。NFC标签实际上是一个编码的
+<code>URL</code>，对应注册了一个 <code>App Clip</code>
+体验，关于如何注册将在后面部分进行详细展开。<code>NFC</code> 触发弹出
+<code>App Clip</code>，当你点击 <code>App Clip</code>
+上的“打开”按钮后，<code>App Clip</code> 将启动带有通过
+<code>NSUserActivity</code> 传递的URL，之后 <code>App Clip</code>
+将你直接带到订购页面。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/d8df3036e23df847f422195e47b1fca6.png" /></p>
+<p>除了 <code>NFC</code>，活动链接也可以出现在其他地方。你的
+<code>URL</code>，可以编码在物理标签中；也可以与地图上的实际位置相关联。下面，让我们逐一介绍这些链接的处理方法。</p>
+<h2 id="链接方式">3. 链接方式</h2>
+<p>[02:03] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/7865000791ede1dcbaa508b15b36c68a.png" />
+正如在前面的示例中提到的那样，<code>NFC</code> 标签可以编码入一个
+<code>App Clip URL</code>，用户可以通过手机放到 <code>NFC</code>
+上来打开 <code>App Clip</code>。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/05da30dda931d78b9af6bb8cda85904c.png" />
+<code>App Clip URL</code>
+也可以编码入一个二维码中，人们可以通过扫描二维码来触发
+<code>App Clip</code>。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/f047608a83859953345412dbca680899.png" />
+<img
+src="https://images.xiaozhuanlan.com/photo/2020/e823d9a130595e5d7db728b94b240fea.png" />
+<code>App Clip</code>可以显示在已注册商家的地图位置卡上，也可以显示在
+<code>Siri</code> 附近建议中。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/0bc3d18ede6dfd4b7712b8aae3e9a8f1.png" />
+如果你的网页配置了 <code>App Clip</code>
+对应的智能应用横幅，则你也可以从 Safari 打开
+<code>App Clip</code>。用户可以通过点击该横幅中的打开按钮以打开
+<code>App Clip</code>。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/549b4d655f39f233862fcc5d61d92d42.png" />
+当用户在 <code>Messages app</code> 中发送该站点的 <code>URL</code>
+时，它会以特殊的 <code>App Clip</code>
+链接气泡显示，该气泡让用​​户可以选择在 <code>App Clip</code> 或在 Safari
+中打开链接。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/2ef221227c0b2d1e6e8203a3533d8db4.png" />
+此外，为了给大家带来更好的体验，苹果将于今年晚些时候发布新的
+<code>App Clip</code> 码，这是让你的用户发现你的 <code>App Clip</code>
+的最佳方式。它在视觉上是美观而独特的，因此当用户看到它时，便知道有一个
+<code>App Clip</code> 在等待他们去使用。每个 <code>App Clip</code>
+码都对应编码了一个
+<code>URL</code>。苹果将​​于今年晚些时候发布可以创建这些独特
+<code>App Clip</code> 码的工具。</p>
+<p>现在我们已经知道了可以让用户进入到你的 <code>App Clip</code>
+的不同方法。接下来，让我们逐步了解 <code>App Clip</code>
+开发人员在设置链接体验过程中所需要做的步骤。</p>
+<h2 id="链接到你的-app-clip">4. 链接到你的 App Clip</h2>
+<p>[03:38] <img
+src="https://images.xiaozhuanlan.com/photo/2020/d54f65449e68143aee00bb35ec0496b2.png" />
+首先，你必须对 <code>Web 服务器</code>和
+<code>App Clip 项目</code>进行更改。以让这些链接可以由
+<code>App Clip</code> 处理。接下来，你必须配置 <code>App Clip</code>
+卡片，该卡片用于向用户介绍 <code>App Clip</code> 的信息，也是
+<code>App Clip</code> 体验的一部分。你可以在 App Store Connect
+上设置默认和高级 <code>App Clip</code>
+体验。下面，让我们配置一个智能应用横幅，以在网页上显示你的
+<code>App Clip</code>。如果你可以通过更好和更简化的
+<code>App Clip</code>
+体验来交付网页内容，可以考虑添加此标语，以此来为你的用户提供一种可以从该网页访问
+<code>App Clip</code> 的方法。首先，让我们开始配置
+<code>Web服务器</code> 和 <code>App  Clip</code> 以进行链接处理。</p>
+<h3 id="配置web服务器和-app-clip-以进行链接处理">4.1 配置Web服务器和 App
+Clip 以进行链接处理</h3>
+<p>[04:28] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/2300c85c4ee85c70b959e4fe521021e8.png" />
+你的网站和你的 <code>App Clip</code> 之间的关联必须经过验证，以便
+<code>App Clip</code> 能够显示内容来代替网站的
+<code>URL</code>。为了将你的 <code>App Clip</code>
+与服务器安全地关联，你将需要 Web 服务器上的
+<code>apple-app-site-association</code> 文件，以及 <code>App Clip</code>
+上适当的关联域权限。之后，你必须更新 <code>App Clip</code>
+中的代码以处理传入 <code>NSUserActivity</code> 的链接。首先，让我们更新
+Web 服务器上的 <code>apple-app-site-association</code> 文件。</p>
+<h4 id="更新-apple-app-site-association-文件">4.1.1 更新
+apple-app-site-association 文件</h4>
+<p>[05:06] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/8c73058bcf00f33456a357544e7a68d2.png" />
+该文件位于服务器的根文件夹中的 <code>./well-known</code>
+的子目录中。如果你之前已经为应用程序设置了<code>通用链接（Universal Links）</code>，则可能已经在服务器上设置了该文件。根字典已经具有其他条目，例如
+Web 凭据和应用程序链接。要在此文件中声明新的 <code>App Clip</code>
+关联，请在根字典中添加另一个项，其键为 <code>“appclips”</code>
+，并且该值包含一个字典，该字典包含单个 <code>apps</code>
+键，该键设置为包含 <code>App Clip</code> 的应用标识符的数组。</p>
+<h4 id="添加关联的域权限">4.1.2 添加关联的域权限</h4>
+<p>[05:45] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/a0b2421f7505c719759b69b712f45d1b.png" />
+接下来，让我们更新 <code>App Clip</code> 项目以添加关联的域权利。在
+Xcode 中，进入你的项目设置并添加 <code>Associated Domains</code>
+功能。在 <code>Domains</code> 下，添加一个新的字符串
+<code>appclips:</code>。现在，你的网站和 <code>App Clip</code>
+均已设置了相关的域，让我们添加代码来处理
+<code>NSUserActivity</code>，其中包含传递到你的
+<code>App Clip</code>中的 URL。</p>
+<h4 id="处理-nsuseractivity">4.1.3 处理 NSUserActivity</h4>
+<p>[06:15] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/db0a08bea2ecd894f6a085b8a22fde54.png" />
+如果你的 <code>App Clip</code> 采用了新的 <code>SwiftUI</code>
+应用程序生命周期，则可以通过上图中的方法为网络浏览用户活动添加处理程序。在该方法中，你可以从
+<code>NSUserActivity</code> 获取 <code>webpageURL</code>
+属性。然后，你可以解析该 URL
+并将用户定向到链接的内容。请记住，当用户升级或下载了主 App
+以后，<code>App Clip</code> 会直接打开主
+App。因此，请确保你的应用程序也具有类似的代码来处理<code>通用链接（Universal Links）</code>的网址。
+￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/b1692df0d3952c3f2575b275d8ec1063.png" />
+如果你的 <code>App Clip</code> 使用 <code>UIKit SceneDelegate</code>
+生命周期，则上图是一些类似的处理代码，用于处理 <code>UIScene</code>
+委托中传入的用户活动。要了解有关如何设置关联域和处理
+<code>NSUserActivities</code> 的信息，请参阅会话：<a
+href="https://developer.apple.com/videos/play/wwdc2020/10098">What's New
+in Universal Link</a>。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/a72153f06b33e72b892ac3ff3c4529f2.png" />
+如果你需要在 Xcode 中调试 <code>App Clip</code> 中 URL
+处理相关的代码，可以指定要传递到 <code>App Clip</code> 的测试 URL。在
+Xcode 中打开 <code>Scheme</code> 编辑器。选择 <code>Arguments</code>
+选项卡。在 <code>Environment Variables</code> 下，指定
+<code>_XCAppClipURL</code> 变量。现在，当你从 Xcode 运行你的
+<code>App Clip</code> 时，它将使用此 URL 启动。现在，我们已经完成了 Web
+服务器和 <code>App Clip</code> 的配置，接下来，我们来配置
+<code>App Clip</code> 体验。</p>
+<h3 id="在-app-store-connect-上配置-app-clip-体验">4.2 在 App Store
+Connect 上配置 App Clip 体验</h3>
+<p>[07:51] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/7dd3b58d209c31a74110da1030a52c8f.png" />
+每次 <code>App Clip</code> 体验都是从用户触发看到的
+<code>App Clip</code> 卡片（App Clip 链接）开始的。它展示了有关
+<code>App Clip</code> 的信息，并征得用户的同意以打开它。</p>
+<h4 id="app-clip-设计规则">4.2.1 App Clip 设计规则</h4>
+<p>[08:04] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/4b70355c3b33b8df3899305dcd2eab08.png" />
+当你在提交用于配置 <code>App Clip</code>
+卡的元数据时，请遵循标题和副标题长度上的这些要求，以实现卡片的最佳布局。为了满足所有设备上的最佳用户体验，还有图片大小，宽高比和格式上的要求。你所选择的图片需要遵循此
+<code>App Clip</code> 操作所提供的准则。现在，让我们在 App Store Connect
+上设置 <code>App Clip</code> 卡片。</p>
+<h4 id="在-app-store-connect-上设置-app-clip-卡片">4.2.2 在 App Store
+Connect 上设置 App Clip 卡片</h4>
+<p>[08:34] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/fc27237382cf79f88f95b8b852d727c0.png" />
+在将包含你的应用程序和你的 <code>App Clip</code> 的构建交付给 App Store
+Connect 之后，<code>App Clip</code> 会在 App Store Connect
+上进行显示，会看到一个新的<code>“App Clip配置”</code>模块。你可以在此处开始设置默认和高级的
+<code>App Clip</code> 体验。默认的 <code>App Clip</code>
+体验的元数据包括活动卡的宣传图，文案介绍和相关的交互操作。你可以从中选择预定义的操作列表。此元数据将在
+Safari 中的智能应用横幅中、“消息”中的 App Clip 链接气泡中以及在显示的
+App Clip 卡片中进行使用。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/0f281c9df07418bce39d4dcd17953f26.png" />
+如果你希望不仅可以从 Safari 和消息中访问
+<code>App Clip</code>，你可以通过单击此处的“开始”按钮来进行高级
+<code>App Clip</code> 体验的设置。每种高级 <code>App Clip</code>
+体验均绑定到可以在物理标签（例如 NFC 标签或二维码）中编码的
+URL，因此可以从这些物理调用方法中启动 <code>App Clip</code>。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/14c48130e492dbe27f6c842b0f96e24d.png" />
+确认进行高级设置后，你将到达此页面，你可以在其中指定高级
+<code>App Clip</code> 体验的 URL。对于同一个
+<code>App Clip</code>，你可以设置多个高级 <code>App Clip</code>
+体验，每种体验都有不同的
+URL。后面会介绍一些有关<code>多个 Clip 体验</code>的示例。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/ca1d8c6778cf8fd896859ab77e6d9218.png" />
+进入下一页后，你可以设置图片，标题，副标题，并为 <code>App Clip</code>
+卡选择一个触发事件来获得这种体验。你也可以选择将此 <code>App Clip</code>
+体验与实际位置相关联。现在，让我们看一下高级 <code>App Clip</code>
+体验的一些用例以及为这些体验注册 URL 的最佳实践。</p>
+<h4 id="多种-app-clip-的体验">4.2.3 多种 App Clip 的体验</h4>
+<p>[10:28] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/79c80faf77406686f1b279b234188fac.png" />
+<code>单个 Clip</code>
+可以处理不同类型的任务，因此可以为<code>同一个 Clip</code> 自定义不同的
+<code>App Clip</code> 体验。例如，这家餐厅的 <code>App Clip</code>
+为客户提供两种类型的体验。一种是美食订购体验，用户可以通过
+<code>Clip</code> 前往查看菜单并下单；另一种是餐桌预订体验，客人可以通过
+<code>Clip</code> 前往预定餐桌。在这种情况下，可以通过设置两个高级
+<code>App Clip</code> 体验来满足需求。一个用于
+<code>melamela.example/order</code>，其中图片和副标题可以分别是餐厅的菜单图片和菜单描述，方便菜单查看和下单；另一个用于
+<code>melamela.example/reservation</code>，其中图片和副标题可以分别是对应餐桌的图片和文字描述，方便餐桌预定。</p>
+<h4 id="最佳实践">4.2.4 最佳实践</h4>
+<h5 id="指定-app-clip-的体验-url">4.2.4.1 指定 App Clip 的体验 URL</h5>
+<p>[11:23]</p>
+<p>关于 URL 映射到 <code>App Clip</code>
+的方式要记住的一件事是，它是基于最特定的前缀与已注册的
+<code>App Clip</code> 体验 URL
+的匹配。这意味着你无需为企业注册每个可能的
+<code>App Clip URL</code>。但是请记住，即使你注册的体验 URL
+仅用作前缀，你的 <code>App Clip</code> 也必须能够处理使用确切的注册 URL
+启动的情况。在通过“Siri附近的建议”和“地图”调用你的 <code>App Clip</code>
+时，可能会发生这种情况。</p>
+<h5 id="示例-自行车租赁">4.2.4.2 示例-自行车租赁</h5>
+<p>[12:00] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/6b65754ee3adadac41208ad57d254558.png" />￼
+<img
+src="https://images.xiaozhuanlan.com/photo/2020/fcb1b3019740906051c6e683e122518a.png" />
+这个示例，我们将介绍如何通过注册一个 <code>App Clip 体验 URL</code>
+来与多个调用 URL
+一起使用。自行车商店有在线自行车租赁系统。它有成百上千的自行车出租，由
+ID 编号标识。预订这些自行车的 URL 将在查询字符串参数中指定该
+ID。幸运的是，由于这些 URL
+是基于前缀匹配进行匹配的，因此该自行车商店无需为每​​个 URL 预先注册
+<code>App Clip</code> 体验。只需注册一个
+<code>App Clip 体验 URL</code>：<code>https://bikesrental.example/rent</code>
+。这足以为所有具有该前缀和不同查询字符串参数的所有自行车 URL 提供
+<code>App Clip 体验</code>。</p>
+<h5 id="示例-咖啡店">4.2.4.3 示例-咖啡店</h5>
+<p>[12:50] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/930e2fc4114d8251fdf9745dcd453e75.png" />
+<img
+src="https://images.xiaozhuanlan.com/photo/2020/5f0c02274737b552c2246a89fda8b5ec.png" />
+<img
+src="https://images.xiaozhuanlan.com/photo/2020/228e1ebccd91c6224af9626b5be9a95a.png" />
+<img
+src="https://images.xiaozhuanlan.com/photo/2020/4ac7b286e6b7447da57fd200aa4dcd47.png" />
+这是另一个示例，用于说明选择 URL 进行注册以获取高级
+<code>App Clip</code>
+的策略。在这个示例中，咖啡馆是一个大型连锁店，拥有多个地点，每个地点基本上都为其客户提供相似的体验。由于所有位置的
+URL 格式都统一，且均以 <code>https://brighteggcafe.example/store/</code>
+开头，因此我们只需为该 URL 前缀注册 App Clip
+体验即可。当客户点击指向其任何商店的链接时，他们将获得相同的
+<code>App Clip</code>
+卡片。但是，假设咖啡店希望为其<code>库比蒂诺（Cupertino）</code>旗舰店提供更特别的
+<code>App Clip</code>
+体验。要解决此问题，你还可以使用不同的宣传图和描述文本为特定的
+<code>App Clip 体验</code>注册 Cupertino 商店
+URL。这里的主要要点是，你可以注册一个更短，更通用的 URL
+前缀，以覆盖大多数情况，并仅在需要提供不同的
+<code>App Clip 体验</code>时才注册一个更特定的 URL。</p>
+<p>有关在 App Store Connect 上设置默认和高级
+<code>App Clip 体验</code>的详细信息，请参阅会话： <a
+href="https://developer.apple.com/videos/play/wwdc2020/10651/">What's
+New in App Store Connect</a> 。有关
+<code>App Clip 卡片</code>设计的最佳实践，请参阅会话：<a
+href="https://developer.apple.com/videos/play/wwdc2020/10172">Design
+Great App Clips</a> 。</p>
+<h3 id="配置智能应用横幅以打开-app-clip">4.3 配置智能应用横幅以打开 App
+Clip</h3>
+<p>[14:17] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/df37ff98b54a4fb58e47c475aee464a6.png" />
+现在到了最后一步，通过处理链接来触发你的
+<code>App Clip</code>。可以通过设置智能应用横幅，以打开你的
+<code>App Clip</code>。当发送出配置了此标语的网页 URL
+时，接收人可以通过智能应用横幅从 Safari 或“消息”中的网页打开
+<code>App Clip</code>。如果你之前已经为应用设置了智能应用横幅，应该已经熟悉了添加到网页
+HTML 中的 <code>apple-itunes-app</code>
+的元标记，是用来指定应用的唯一标识符。要为你的 <code>App Clip</code>
+配置此横幅，请将 <code>app-clip-bundle-id</code> 内容属性设置为
+<code>App Clip</code> 的捆绑包标识符。你还应该继续设置
+<code>app-id</code> 属性，这样对于使用 iOS 14
+之前系统的用户，将保持之前的网页形式。Safari
+在显示以下内容之前，将验证网站和 <code>App Clip</code>
+之间的域关联情况。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/4931abeea062fe744868952da5fa5dc4.png" />
+默认情况下，当用户点击智能应用横幅的“打开”按钮时。他们将看到为此
+<code>App Clip</code> 配置的默认
+<code>App Clip 卡片</code>。但是，如果使用高级
+<code>App Clip 体验</code>注册此URL，则可以自定义体验的元数据，以便用户可以在横幅中看到更具描述性的标题，并获得针对该
+<code>App Clip</code> 执行的任务量身定制的
+<code>App Clip卡片</code>。</p>
+<p>为了演示我们上述内容所谈论到的 <code>App Clip</code>
+的链接时涉及的内容，你可以通过下方的视频链接快进到
+<strong><code>15分48秒</code></strong> 查看完整的演示视频。</p>
+<p>视频链接：<a
+href="https://developer.apple.com/videos/play/wwdc2020/10146/">https://developer.apple.com/videos/play/wwdc2020/10146/</a></p>
+<h2 id="在-testflight-中为你的-app-clip-添加测试调用点">5. 在 TestFlight
+中为你的 App Clip 添加测试调用点</h2>
+<p>[21:22] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/a953d1f94901d1094bc8fdfee5275d5b.png" />
+此外，还需要简要介绍下如何对 <code>App Clip</code> 进行 beta
+测试。在你将包含应用程序和 <code>App Clip</code> 的构建交付给 App Store
+Connect之后，你可以在 TestFlight 中找到一个新的
+<code>App Clip 模块</code>，该模块可以用于为你的 <code>App Clip</code>
+添加测试调用点，以便 Beta 测试人员可以测试待开放的不同
+<code>App Clip 体验</code>的 URL。 ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/8a2c348d025213e731e0918baac68fe3.png" />
+单击 <code>Add App Clip Invocation</code>（添加App
+Clip调用），然后设置你希望 Beta 测试人员试用的
+<code>App Clip 体验</code>的标题和 URL。有关在 App Store Connect
+中测试和提交 <code>App Clip</code> 的更多信息，请参阅会话：<a
+href="https://developer.apple.com/videos/play/wwdc2020/10651/">What's
+New in App Store Connect</a>。</p>
+<h2 id="总结">6. 总结</h2>
+<p>[22:05] ￼<img
+src="https://images.xiaozhuanlan.com/photo/2020/9c664627b6da57d20b6f16ca62b37dbb.png" />
+在本篇的内容里，我们已经向你展示了以下内容：</p>
+<ol type="1">
+<li>如何通过为新的 <code>App Clip</code> 服务类型设置关联的域并在
+<code>App Clip</code> 中处理网络浏览 <code>NSUserActivity</code>
+来处理到你的 <code>App Clip</code> 中的链接。</li>
+<li>如何在 App Store Connect 上配置默认和高级
+<code>App Clip 体验</code>，包括有关注册
+<code>App Clip 体验</code>时使用哪些 URL 的最佳实践；</li>
+<li>如何设置智能应用横幅，以在网页上打开 <code>App Clip</code>；</li>
+<li>最后是如何在 TestFlight 中测试 <code>App Clip</code> 的新功能。</li>
+</ol>
+<p>感谢您的阅读，也期待您带来精彩的 App Clip~</p>
+<blockquote>
+<p>相关内容： - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10118">WWDC 2020
+- Create app clips for other businesses</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10172">WWDC 2020
+- Design great app clips</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10174">WWDC 2020
+- Explore app clips</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10120">WWDC 2020
+- Streamline your app clip</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10651">WWDC 2020
+- What's new in App Store Connect</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2020/10098">WWDC 2020
+- What's new in Universal Links</a> - <a
+href="https://developer.apple.com/videos/play/wwdc2019/717">WWDC 2019 -
+What's New in Universal Links</a></p>
+</blockquote>
+
+    </article>
+    <!-- license -->
+    
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+            
+        </li>
+        <li class="previous">
+            
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2020/04/08/2020-04-08-about-ram/" title="iOS 内存相关梳理">
+                    <div class="prevTitle">iOS 内存相关梳理</div>
+                </a>
+            
+        </li>
+    </ul>
+    <!-- comment -->
+    
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+
+            
+
+            
+    <div id="gitment-container"></div>
+    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <script>
+        var gitment = new Gitment({
+            id: '1593273600000', // 可选。默认为 location.href
+            owner: 'JonyFang',
+            repo: 'https://github.com/JonyFang/blog-gitment',
+            oauth: {
+                client_id: '2d128cb2a1c7f728df46',
+                client_secret: '26e1f611630b1d3ff77e2afa4ea770d522b07d19',
+            },
+        })
+        gitment.render('gitment-container')
+    </script>
+
+
+            
+
+            <!-- utteranc评论 -->
+
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+
+            
+            
+
+            
+
+        </div>
+    
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    
+    <!-- Mathjax -->
+    
+</main>
+
+                <!-- profile -->
+                
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+    
+        <div class="social">
+            
+    
+        
+            
+                <a href="mailto:jony.chunfang@gmail.com" class="iconfont-archer email" title=email ></a>
+            
+        
+    
+        
+            
+                <a href="//github.com/jonyfang" class="iconfont-archer github" target="_blank" title=github></a>
+            
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+            
+                <a href="/atom.xml" class="iconfont-archer rss" target="_blank" title=rss></a>
+            
+        
+    
+
+
+        </div>
+    
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    
+    <!-- 不蒜子  -->
+    	
+</footer>
+
+        </div>
+        <!-- toc -->
+        
+            <div class="toc-wrapper toc-wrapper-loding" style=
+
+
+
+
+
+
+
+    top:50vh;
+
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">1.前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#app-clip-%E5%BA%94%E7%94%A8%E7%A4%BA%E4%BE%8B---%E8%AE%A2%E8%B4%AD%E5%86%B0%E6%B2%99"><span class="toc-number">2.</span> <span class="toc-text">2.App Clip 应用示例 -
+订购冰沙🍧</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%93%BE%E6%8E%A5%E6%96%B9%E5%BC%8F"><span class="toc-number">3.</span> <span class="toc-text">3. 链接方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%93%BE%E6%8E%A5%E5%88%B0%E4%BD%A0%E7%9A%84-app-clip"><span class="toc-number">4.</span> <span class="toc-text">4. 链接到你的 App Clip</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AEweb%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%92%8C-app-clip-%E4%BB%A5%E8%BF%9B%E8%A1%8C%E9%93%BE%E6%8E%A5%E5%A4%84%E7%90%86"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 配置Web服务器和 App
+Clip 以进行链接处理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9B%B4%E6%96%B0-apple-app-site-association-%E6%96%87%E4%BB%B6"><span class="toc-number">4.1.1.</span> <span class="toc-text">4.1.1 更新
+apple-app-site-association 文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B7%BB%E5%8A%A0%E5%85%B3%E8%81%94%E7%9A%84%E5%9F%9F%E6%9D%83%E9%99%90"><span class="toc-number">4.1.2.</span> <span class="toc-text">4.1.2 添加关联的域权限</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A4%84%E7%90%86-nsuseractivity"><span class="toc-number">4.1.3.</span> <span class="toc-text">4.1.3 处理 NSUserActivity</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8-app-store-connect-%E4%B8%8A%E9%85%8D%E7%BD%AE-app-clip-%E4%BD%93%E9%AA%8C"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 在 App Store
+Connect 上配置 App Clip 体验</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#app-clip-%E8%AE%BE%E8%AE%A1%E8%A7%84%E5%88%99"><span class="toc-number">4.2.1.</span> <span class="toc-text">4.2.1 App Clip 设计规则</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%9C%A8-app-store-connect-%E4%B8%8A%E8%AE%BE%E7%BD%AE-app-clip-%E5%8D%A1%E7%89%87"><span class="toc-number">4.2.2.</span> <span class="toc-text">4.2.2 在 App Store
+Connect 上设置 App Clip 卡片</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A4%9A%E7%A7%8D-app-clip-%E7%9A%84%E4%BD%93%E9%AA%8C"><span class="toc-number">4.2.3.</span> <span class="toc-text">4.2.3 多种 App Clip 的体验</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5"><span class="toc-number">4.2.4.</span> <span class="toc-text">4.2.4 最佳实践</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E6%8C%87%E5%AE%9A-app-clip-%E7%9A%84%E4%BD%93%E9%AA%8C-url"><span class="toc-number">4.2.4.1.</span> <span class="toc-text">4.2.4.1 指定 App Clip 的体验 URL</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B-%E8%87%AA%E8%A1%8C%E8%BD%A6%E7%A7%9F%E8%B5%81"><span class="toc-number">4.2.4.2.</span> <span class="toc-text">4.2.4.2 示例-自行车租赁</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B-%E5%92%96%E5%95%A1%E5%BA%97"><span class="toc-number">4.2.4.3.</span> <span class="toc-text">4.2.4.3 示例-咖啡店</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE%E6%99%BA%E8%83%BD%E5%BA%94%E7%94%A8%E6%A8%AA%E5%B9%85%E4%BB%A5%E6%89%93%E5%BC%80-app-clip"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 配置智能应用横幅以打开 App
+Clip</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9C%A8-testflight-%E4%B8%AD%E4%B8%BA%E4%BD%A0%E7%9A%84-app-clip-%E6%B7%BB%E5%8A%A0%E6%B5%8B%E8%AF%95%E8%B0%83%E7%94%A8%E7%82%B9"><span class="toc-number">5.</span> <span class="toc-text">5. 在 TestFlight
+中为你的 App Clip 添加测试调用点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">6. 总结</span></a></li></ol>
+            </div>
+        
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 26
+        </div>
+        <!-- search  -->
+        
+    </div>
+    
+    <div class="post-archive">
+    
+        
+            
+            
+            <div class="archive-year"> 2020 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/28</span>
+            <a class="archive-post-title" href="/2020/06/28/2020-06-28-configure-and-link-appClips/">WWDC20 10146 - App Clips 的配置及链接处理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/08</span>
+            <a class="archive-post-title" href="/2020/04/08/2020-04-08-about-ram/">iOS 内存相关梳理</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2019 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">12/15</span>
+            <a class="archive-post-title" href="/2019/12/15/2019-12-15-ios-speed/">iOS 启动速度优化调研</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/10</span>
+            <a class="archive-post-title" href="/2019/11/10/2019-11-10-ios-ipa/">iOS IPA 包体积优化</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/07</span>
+            <a class="archive-post-title" href="/2019/11/07/2019-11-07-yytext/">YYText 中的 CoreText</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/14</span>
+            <a class="archive-post-title" href="/2019/09/14/2019-09-14-ios-analyse-llvm/">iOS 编译过程梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/01</span>
+            <a class="archive-post-title" href="/2019/07/01/2019-07-01-ios-js-native/">iOS 中 JS 与原生交互</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2018 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">07/11</span>
+            <a class="archive-post-title" href="/2018/07/11/2018-07-11-osspinlock-to-osUnfairLock/">OSSpinLock 与 os_unfair_lock</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2018/06/14/2018-06-14-ios-runloop/">RunLoop 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/12</span>
+            <a class="archive-post-title" href="/2018/06/12/2018-06-12-objc-autoreleasePool/">AutoreleasePool 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/10</span>
+            <a class="archive-post-title" href="/2018/06/10/2018-06-10-objc-weak/">weak 源码分析</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/03</span>
+            <a class="archive-post-title" href="/2018/05/03/2018-05-03-clang-fatal-error/">记一次 clang 编译错误的解决</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2017 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/03</span>
+            <a class="archive-post-title" href="/2017/10/03/2017-10-03-nshashtable-and-nsmaptable/">NSHashTable 和 NSMapTable</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/01</span>
+            <a class="archive-post-title" href="/2017/10/01/2017-10-01-yycache/">YYCache 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">09/10</span>
+            <a class="archive-post-title" href="/2017/09/10/2017-09-10-yyimage/">YYImage 源码梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">08/30</span>
+            <a class="archive-post-title" href="/2017/08/30/2017-08-30-wwdc17-505-whats-new-in-photos-apis/">WWDC17 505 - Photos APIs 新特性</a>
+        </li>
+    
+        
+            
+            
+                
+                </ul>
+            
+            <div class="archive-year"> 2016 </div>
+            <ul class="year-list">
+            
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/15</span>
+            <a class="archive-post-title" href="/2016/05/15/2016-05-15-http-and-https/">HTTP 和 HTTPS</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/03</span>
+            <a class="archive-post-title" href="/2016/04/03/2016-04-03-objc-tips/">Objc Tips</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/26</span>
+            <a class="archive-post-title" href="/2016/03/26/2016-03-26-objc-kvo/">KVO 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2016/03/25/2016-03-25-objc-kvc/">KVC 梳理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2016/03/16/2016-03-16-objc-associated-objects/">Associated Objects 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/13</span>
+            <a class="archive-post-title" href="/2016/03/13/2016-03-13-objc-cetegory/">Category 实现原理</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/11</span>
+            <a class="archive-post-title" href="/2016/03/11/2016-03-11-ios-lock/">iOS 中的锁</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/10</span>
+            <a class="archive-post-title" href="/2016/03/10/2016-03-10-ios-operation/">iOS 多线程 - NSOperation</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/09</span>
+            <a class="archive-post-title" href="/2016/03/09/2016-03-09-ios-gcd/">iOS 多线程 - GCD</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/01</span>
+            <a class="archive-post-title" href="/2016/03/01/2016-03-01-block/">Block 梳理</a>
+        </li>
+    
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+        
+            <span class="sidebar-tag-name" data-tags="iOS">
+                <span class="iconfont-archer">&#xe606;</span>
+                iOS
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="多线程">
+                <span class="iconfont-archer">&#xe606;</span>
+                多线程
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="Objective-C">
+                <span class="iconfont-archer">&#xe606;</span>
+                Objective-C
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="源码阅读">
+                <span class="iconfont-archer">&#xe606;</span>
+                源码阅读
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="开发报错">
+                <span class="iconfont-archer">&#xe606;</span>
+                开发报错
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="底层原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                底层原理
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="WWDC">
+                <span class="iconfont-archer">&#xe606;</span>
+                WWDC
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="优化相关">
+                <span class="iconfont-archer">&#xe606;</span>
+                优化相关
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="App Clips">
+                <span class="iconfont-archer">&#xe606;</span>
+                App Clips
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="基础">
+                <span class="iconfont-archer">&#xe606;</span>
+                基础
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="编译原理">
+                <span class="iconfont-archer">&#xe606;</span>
+                编译原理
+            </span>
+        
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+    
+        <span class="sidebar-category-name" data-categories="iOS">
+            <span class="iconfont-archer">&#xe60a;</span>
+            iOS
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="Objective-C">
+            <span class="iconfont-archer">&#xe60a;</span>
+            Objective-C
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="多线程">
+            <span class="iconfont-archer">&#xe60a;</span>
+            多线程
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="源码阅读">
+            <span class="iconfont-archer">&#xe60a;</span>
+            源码阅读
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="开发报错">
+            <span class="iconfont-archer">&#xe60a;</span>
+            开发报错
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="底层原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            底层原理
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="WWDC">
+            <span class="iconfont-archer">&#xe60a;</span>
+            WWDC
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="技术">
+            <span class="iconfont-archer">&#xe60a;</span>
+            技术
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="优化相关">
+            <span class="iconfont-archer">&#xe60a;</span>
+            优化相关
+        </span>
+    
+        <span class="sidebar-category-name" data-categories="编译原理">
+            <span class="iconfont-archer">&#xe60a;</span>
+            编译原理
+        </span>
+    
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "http://example.com",
+        root: siteMetaRoot,
+        author: "JonyFang"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+
+        <!-- main func -->
+        <script src="/scripts/main.js?v=20230211"></script>
+        <!-- dark mode -->
+        <script src="/scripts/dark.js?v=20230211"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" defer></script>
+        <!-- algolia -->
+        
+        <!-- busuanzi -->
+        
+        <!-- CNZZ -->
+        
+        <!-- async load share.js -->
+        
+            <script src="/scripts/share.js?v=20230211" async></script>
+        
+        <!-- mermaid -->
+        
+            <script src='https://cdn.jsdelivr.net/npm/mermaid@8.11.0/dist/mermaid.min.js'></script>
+            <script>
+                if (window.mermaid) {
+                    mermaid.initialize({theme: 'dark'});
+                }
+            </script>
+        
+    </body>
+</html>
