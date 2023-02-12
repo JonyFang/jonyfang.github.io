@@ -177,9 +177,9 @@ CPU 上执行，所以执行效率很高。本篇主要用于梳理 Objective-C
     
     <category term="iOS" scheme="http://example.com/categories/iOS/"/>
     
-    <category term="技术" scheme="http://example.com/categories/%E6%8A%80%E6%9C%AF/"/>
-    
     <category term="编译原理" scheme="http://example.com/categories/%E7%BC%96%E8%AF%91%E5%8E%9F%E7%90%86/"/>
+    
+    <category term="技术" scheme="http://example.com/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
     <category term="iOS" scheme="http://example.com/tags/iOS/"/>
