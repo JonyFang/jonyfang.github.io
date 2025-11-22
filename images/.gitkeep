@@ -1,0 +1,15 @@
+# 图片存放目录
+
+将图片文件放在这个目录中，可以在文章中引用：
+
+```markdown
+![描述](/images/posts/example.png)
+```
+
+建议的目录结构：
+```
+static/images/
+  ├── posts/        # 博客文章图片
+  ├── projects/     # 项目截图
+  └── about/        # 关于页面图片
+```

@@ -1,0 +1,62 @@
+<svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- 黑色背景 -->
+  <rect width="1200" height="400" fill="#000000"/>
+
+  <!-- 定义箭头标记 -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+  </defs>
+
+  <!-- 核心模块 1: Hugo 本地编写 - 深绿色背景 -->
+  <g>
+    <rect x="100" y="150" width="250" height="100" rx="8" fill="#2d5a3d" stroke="#4ade80" stroke-width="2"/>
+    <text x="225" y="185" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Hugo
+    </text>
+    <text x="225" y="210" font-family="Arial, sans-serif" font-size="14" fill="#d0f0d8" text-anchor="middle">
+      本地编写 Markdown
+    </text>
+    <text x="225" y="230" font-family="Arial, sans-serif" font-size="14" fill="#d0f0d8" text-anchor="middle">
+      静态站点生成
+    </text>
+  </g>
+
+  <!-- 箭头 1: Hugo -> GitHub Actions -->
+  <path d="M 350 200 L 450 200" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="190" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">git push</text>
+
+  <!-- 核心模块 2: GitHub Actions - 深橙色背景 -->
+  <g>
+    <rect x="450" y="150" width="250" height="100" rx="8" fill="#b36800" stroke="#ff9500" stroke-width="2"/>
+    <text x="575" y="185" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      GitHub Actions
+    </text>
+    <text x="575" y="210" font-family="Arial, sans-serif" font-size="14" fill="#ffe6c0" text-anchor="middle">
+      自动构建
+    </text>
+    <text x="575" y="230" font-family="Arial, sans-serif" font-size="14" fill="#ffe6c0" text-anchor="middle">
+      CI/CD 流程
+    </text>
+  </g>
+
+  <!-- 箭头 2: GitHub Actions -> GitHub Pages -->
+  <path d="M 700 200 L 800 200" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <text x="750" y="190" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">deploy</text>
+
+  <!-- 核心模块 3: GitHub Pages - 深紫蓝色背景 -->
+  <g>
+    <rect x="800" y="150" width="250" height="100" rx="8" fill="#4a4a7a" stroke="#8b8bff" stroke-width="2"/>
+    <text x="925" y="185" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      GitHub Pages
+    </text>
+    <text x="925" y="210" font-family="Arial, sans-serif" font-size="14" fill="#d8d8ff" text-anchor="middle">
+      托管静态网站
+    </text>
+    <text x="925" y="230" font-family="Arial, sans-serif" font-size="14" fill="#d8d8ff" text-anchor="middle">
+      全球 CDN 访问
+    </text>
+  </g>
+
+</svg>

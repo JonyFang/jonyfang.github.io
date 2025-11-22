@@ -1,0 +1,294 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <!-- 背景 -->
+  <rect width="1200" height="800" fill="#000000"/>
+
+  <!-- 定义渐变和样式 -->
+  <defs>
+    <!-- 卡片阴影 -->
+    <filter id="cardShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- 渐变色 - Apple GPU 风格 -->
+    <linearGradient id="gradientGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5ebd3e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4ade80;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="gradientOrange" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff7700;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="gradientPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b9bff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c7cff;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- 箭头标记 - 白色 -->
+    <marker id="arrowWhite" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="600" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">
+    博客搭建流程
+  </text>
+
+  <!-- 第一层：本地开发环境 -->
+  <g id="layer1">
+    <!-- 背景区域 - 深绿色 - 扩展高度以容纳工具脚本 -->
+    <rect x="50" y="80" width="500" height="280" rx="12" fill="#1a4d2e" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="300" y="110" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#e8f5e9" text-anchor="middle">
+      本地开发环境
+    </text>
+
+    <!-- Hugo 卡片 - 亮绿色 -->
+    <rect x="80" y="130" width="180" height="100" rx="8" fill="#4ade80" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="170" y="160" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Hugo
+    </text>
+    <text x="170" y="185" font-family="Arial, sans-serif" font-size="14" fill="#e8f5e9" text-anchor="middle">
+      静态网站生成器
+    </text>
+    <rect x="100" y="200" width="140" height="20" rx="4" fill="#2d5a3d"/>
+    <text x="170" y="214" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      v0.152.2 Extended
+    </text>
+
+    <!-- PaperMod 卡片 - 亮绿色 -->
+    <rect x="290" y="130" width="180" height="100" rx="8" fill="#4ade80" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="380" y="160" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      PaperMod
+    </text>
+    <text x="380" y="185" font-family="Arial, sans-serif" font-size="14" fill="#e8f5e9" text-anchor="middle">
+      主题
+    </text>
+    <rect x="310" y="200" width="140" height="20" rx="4" fill="#2d5a3d"/>
+    <text x="380" y="214" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Git Submodule
+    </text>
+
+    <!-- 工具脚本卡片 - 灰蓝色 -->
+    <rect x="80" y="250" width="390" height="90" rx="8" fill="#4a5568" stroke="#2d3748" stroke-width="2"/>
+    <text x="275" y="275" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      🛠️ 工具脚本
+    </text>
+    <text x="140" y="300" font-family="Arial, sans-serif" font-size="12" fill="#e2e8f0" text-anchor="start">
+      • new-post.sh
+    </text>
+    <text x="140" y="318" font-family="Arial, sans-serif" font-size="12" fill="#e2e8f0" text-anchor="start">
+      • compress-images.sh
+    </text>
+    <text x="320" y="300" font-family="Arial, sans-serif" font-size="12" fill="#e2e8f0" text-anchor="start">
+      • generate-favicons.sh
+    </text>
+  </g>
+
+  <!-- 第二层：版本控制 -->
+  <g id="layer2">
+    <!-- 背景区域 - 深绿色 -->
+    <rect x="650" y="80" width="500" height="280" rx="12" fill="#1a4d2e" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="900" y="110" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#e8f5e9" text-anchor="middle">
+      版本控制 &amp; 仓库
+    </text>
+
+    <!-- Git 卡片 - 亮绿色 -->
+    <rect x="680" y="140" width="180" height="100" rx="8" fill="#4ade80" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="770" y="170" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Git
+    </text>
+    <text x="770" y="195" font-family="Arial, sans-serif" font-size="14" fill="#e8f5e9" text-anchor="middle">
+      版本控制
+    </text>
+    <rect x="700" y="210" width="140" height="20" rx="4" fill="#2d5a3d"/>
+    <text x="770" y="224" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      git push
+    </text>
+
+    <!-- GitHub 源码仓库卡片 - 亮绿色 -->
+    <rect x="890" y="140" width="230" height="100" rx="8" fill="#4ade80" stroke="#2d5a3d" stroke-width="2"/>
+    <text x="1005" y="170" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      blog_source
+    </text>
+    <text x="1005" y="192" font-family="Arial, sans-serif" font-size="13" fill="#e8f5e9" text-anchor="middle">
+      GitHub Private Repo
+    </text>
+    <rect x="920" y="210" width="80" height="20" rx="4" fill="#c23616"/>
+    <text x="960" y="224" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Private
+    </text>
+    <rect x="1010" y="210" width="80" height="20" rx="4" fill="#2d5a3d"/>
+    <text x="1050" y="224" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Source
+    </text>
+  </g>
+
+  <!-- 箭头：本地 -> Git - 白色 - 水平 -->
+  <path d="M 550 190 L 680 190" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="615" y="180" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+    git commit
+  </text>
+
+  <!-- 箭头：Git -> GitHub - 白色 -->
+  <path d="M 860 190 L 890 190" stroke="#ffffff" stroke-width="2" fill="none" marker-end="url(#arrowWhite)"/>
+
+  <!-- 第三层：CI/CD -->
+  <g id="layer3">
+    <!-- 背景区域 - 橙色背景 -->
+    <rect x="50" y="390" width="500" height="170" rx="12" fill="#663d00" stroke="#b36800" stroke-width="2"/>
+    <text x="300" y="420" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#fff3e0" text-anchor="middle">
+      自动化构建
+    </text>
+
+    <!-- GitHub Actions 卡片 - 橙色 -->
+    <rect x="80" y="440" width="200" height="100" rx="8" fill="#ff9500" stroke="#b36800" stroke-width="2"/>
+    <text x="180" y="470" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      GitHub Actions
+    </text>
+    <text x="180" y="492" font-family="Arial, sans-serif" font-size="13" fill="#fff3e0" text-anchor="middle">
+      CI/CD 工作流
+    </text>
+    <rect x="100" y="510" width="160" height="20" rx="4" fill="#b36800"/>
+    <text x="180" y="524" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      自动触发部署
+    </text>
+
+    <!-- Hugo Build 卡片 - 橙色 -->
+    <rect x="310" y="440" width="200" height="100" rx="8" fill="#ff9500" stroke="#b36800" stroke-width="2"/>
+    <text x="410" y="470" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Hugo Build
+    </text>
+    <text x="410" y="492" font-family="Arial, sans-serif" font-size="13" fill="#fff3e0" text-anchor="middle">
+      构建静态网站
+    </text>
+    <rect x="330" y="510" width="160" height="20" rx="4" fill="#b36800"/>
+    <text x="410" y="524" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      hugo --minify
+    </text>
+  </g>
+
+  <!-- 第四层：部署 & 访问 -->
+  <g id="layer4">
+    <!-- 背景区域 - 紫蓝色背景 -->
+    <rect x="650" y="390" width="500" height="170" rx="12" fill="#3d3d66" stroke="#5555cc" stroke-width="2"/>
+    <text x="900" y="420" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#e8e8ff" text-anchor="middle">
+      部署 &amp; 访问
+    </text>
+
+    <!-- GitHub Pages 仓库卡片 - 紫蓝色 -->
+    <rect x="680" y="440" width="200" height="100" rx="8" fill="#8b8bff" stroke="#5555cc" stroke-width="2"/>
+    <text x="780" y="468" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      jonyfang.github.io
+    </text>
+    <text x="780" y="488" font-family="Arial, sans-serif" font-size="12" fill="#e8e8ff" text-anchor="middle">
+      GitHub Pages
+    </text>
+    <rect x="710" y="510" width="65" height="20" rx="4" fill="#4ade80"/>
+    <text x="742" y="524" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Public
+    </text>
+    <rect x="785" y="510" width="65" height="20" rx="4" fill="#5555cc"/>
+    <text x="817" y="524" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      Static
+    </text>
+
+    <!-- 访问者卡片 - 紫蓝色 -->
+    <rect x="910" y="440" width="200" height="100" rx="8" fill="#8b8bff" stroke="#5555cc" stroke-width="2"/>
+    <text x="1010" y="475" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      🌐 访问博客
+    </text>
+    <text x="1010" y="500" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff" text-anchor="middle">
+      jonyfang.github.io
+    </text>
+    <rect x="930" y="512" width="160" height="20" rx="4" fill="#5555cc"/>
+    <text x="1010" y="526" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">
+      浏览器访问
+    </text>
+  </g>
+
+  <!-- 垂直箭头：GitHub Repo -> GitHub Actions - 白色 - 避开工具脚本区域 -->
+  <path d="M 1005 240 L 1005 370 L 180 370 L 180 440" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="1020" y="305" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">
+    Push 触发
+  </text>
+
+  <!-- 箭头：GitHub Actions -> Hugo Build - 白色 -->
+  <path d="M 280 490 L 310 490" stroke="#ffffff" stroke-width="2" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="295" y="480" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+    执行
+  </text>
+
+  <!-- 箭头：Hugo Build -> GitHub Pages - 白色 - 避开底部说明 -->
+  <path d="M 510 490 L 595 490 L 595 575 L 780 575 L 780 540" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="630" y="565" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+    部署静态文件
+  </text>
+
+  <!-- 箭头：GitHub Pages -> 访问者 - 白色 -->
+  <path d="M 880 490 L 910 490" stroke="#ffffff" stroke-width="2" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="895" y="480" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+    HTTPS
+  </text>
+
+  <!-- 底部说明 -->
+  <g id="legend">
+    <rect x="50" y="590" width="1100" height="200" rx="12" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="2"/>
+    <text x="600" y="620" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#e8e8ff" text-anchor="middle">
+      工作流程说明
+    </text>
+
+    <!-- 流程步骤 -->
+    <g id="steps">
+      <circle cx="100" cy="660" r="20" fill="url(#gradientGreen)"/>
+      <text x="100" y="667" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+      <text x="140" y="665" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        本地使用 Hugo + PaperMod + 工具脚本编写文章
+      </text>
+
+      <circle cx="100" cy="710" r="20" fill="url(#gradientGreen)"/>
+      <text x="100" y="717" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+      <text x="140" y="715" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        Git 提交代码并 Push 到 blog_source 私有仓库
+      </text>
+
+      <circle cx="100" cy="760" r="20" fill="url(#gradientOrange)"/>
+      <text x="100" y="767" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+      <text x="140" y="765" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        Push 触发 GitHub Actions 自动化工作流
+      </text>
+
+      <circle cx="620" cy="660" r="20" fill="url(#gradientOrange)"/>
+      <text x="620" y="667" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+      <text x="660" y="665" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        GitHub Actions 执行 Hugo 构建命令
+      </text>
+
+      <circle cx="620" cy="710" r="20" fill="url(#gradientOrange)"/>
+      <text x="620" y="717" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+      <text x="660" y="715" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        构建生成静态 HTML 文件（压缩优化）
+      </text>
+
+      <circle cx="620" cy="760" r="20" fill="url(#gradientPurple)"/>
+      <text x="620" y="767" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+      <text x="660" y="765" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+        自动部署到 jonyfang.github.io 公开仓库并发布
+      </text>
+    </g>
+  </g>
+
+  <!-- 作者签名 -->
+  <text x="1150" y="790" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af" text-anchor="end">
+    @JonyFang
+  </text>
+</svg>
