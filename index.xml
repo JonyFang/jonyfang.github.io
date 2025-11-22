@@ -37,4 +37,4 @@
 &lt;p&gt;&lt;strong&gt;Better late than never&lt;/strong&gt; - 现在开始，永远不晚&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;hr&gt;
-&lt;p&gt;感谢你的访问！如果你喜欢我的文章，欢迎订阅 &lt;a href="https://jonyfang.github.io/index.xml"&gt;RSS&lt;/a&gt; 或在 GitHub 上给我 Star ⭐&lt;/p&gt;</description></item><item><title>Hello World</title><link>https://jonyfang.github.io/posts/hello-world/</link><pubDate>Wed, 22 Jan 2025 20:00:00 +0800</pubDate><guid>https://jonyfang.github.io/posts/hello-world/</guid><description>欢迎来到我的博客，这是使用 Hugo + GitHub Pages 搭建的个人博客</description></item></channel></rss>
+&lt;p&gt;感谢你的访问！如果你喜欢我的文章，欢迎订阅 &lt;a href="https://jonyfang.github.io/index.xml"&gt;RSS&lt;/a&gt; 或在 GitHub 上给我 Star ⭐&lt;/p&gt;</description></item><item><title>Hello World</title><link>https://jonyfang.github.io/posts/hello-world/</link><pubDate>Wed, 22 Jan 2025 20:00:00 +0800</pubDate><guid>https://jonyfang.github.io/posts/hello-world/</guid><description>欢迎来到我的博客，这是使用 Hugo + GitHub Pages + GitHub Actions 搭建的个人博客</description></item></channel></rss>
