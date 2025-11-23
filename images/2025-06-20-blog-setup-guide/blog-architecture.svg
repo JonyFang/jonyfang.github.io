@@ -228,9 +228,9 @@
     执行
   </text>
 
-  <!-- 箭头：Hugo Build -> GitHub Pages - 白色 - 避开底部说明 -->
-  <path d="M 510 490 L 595 490 L 595 575 L 780 575 L 780 540" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)"/>
-  <text x="630" y="565" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+  <!-- 箭头：Hugo Build -> GitHub Pages - 白色 - 直接连接 -->
+  <path d="M 510 490 L 680 490" stroke="#ffffff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)"/>
+  <text x="595" y="480" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
     部署静态文件
   </text>
 
@@ -242,46 +242,49 @@
 
   <!-- 底部说明 -->
   <g id="legend">
-    <rect x="50" y="590" width="1100" height="200" rx="12" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="2"/>
-    <text x="600" y="620" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#e8e8ff" text-anchor="middle">
+    <rect x="50" y="590" width="1100" height="190" rx="12" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="2"/>
+    <text x="600" y="620" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#e8e8ff" text-anchor="middle">
       工作流程说明
     </text>
 
-    <!-- 流程步骤 -->
-    <g id="steps">
-      <circle cx="100" cy="660" r="20" fill="url(#gradientGreen)"/>
-      <text x="100" y="667" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
-      <text x="140" y="665" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+    <!-- 流程步骤 - 左列 -->
+    <g id="steps-left">
+      <circle cx="90" cy="660" r="18" fill="url(#gradientGreen)"/>
+      <text x="90" y="666" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+      <text x="120" y="665" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         本地使用 Hugo + PaperMod + 工具脚本编写文章
       </text>
 
-      <circle cx="100" cy="710" r="20" fill="url(#gradientGreen)"/>
-      <text x="100" y="717" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
-      <text x="140" y="715" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+      <circle cx="90" cy="705" r="18" fill="url(#gradientGreen)"/>
+      <text x="90" y="711" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+      <text x="120" y="710" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         Git 提交代码并 Push 到 blog_source 私有仓库
       </text>
 
-      <circle cx="100" cy="760" r="20" fill="url(#gradientOrange)"/>
-      <text x="100" y="767" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
-      <text x="140" y="765" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+      <circle cx="90" cy="750" r="18" fill="url(#gradientOrange)"/>
+      <text x="90" y="756" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+      <text x="120" y="755" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         Push 触发 GitHub Actions 自动化工作流
       </text>
+    </g>
 
-      <circle cx="620" cy="660" r="20" fill="url(#gradientOrange)"/>
-      <text x="620" y="667" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
-      <text x="660" y="665" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+    <!-- 流程步骤 - 右列 -->
+    <g id="steps-right">
+      <circle cx="610" cy="660" r="18" fill="url(#gradientOrange)"/>
+      <text x="610" y="666" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+      <text x="640" y="665" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         GitHub Actions 执行 Hugo 构建命令
       </text>
 
-      <circle cx="620" cy="710" r="20" fill="url(#gradientOrange)"/>
-      <text x="620" y="717" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
-      <text x="660" y="715" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+      <circle cx="610" cy="705" r="18" fill="url(#gradientOrange)"/>
+      <text x="610" y="711" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+      <text x="640" y="710" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         构建生成静态 HTML 文件（压缩优化）
       </text>
 
-      <circle cx="620" cy="760" r="20" fill="url(#gradientPurple)"/>
-      <text x="620" y="767" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
-      <text x="660" y="765" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">
+      <circle cx="610" cy="750" r="18" fill="url(#gradientPurple)"/>
+      <text x="610" y="756" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+      <text x="640" y="755" font-family="Arial, sans-serif" font-size="13" fill="#e8e8ff">
         自动部署到 jonyfang.github.io 公开仓库并发布
       </text>
     </g>
