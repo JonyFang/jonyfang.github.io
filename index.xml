@@ -1,4 +1,39 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Jony's Blog</title><link>https://jonyfang.github.io/</link><description>Recent content on Jony's Blog</description><generator>Hugo -- 0.152.2</generator><language>zh-CN</language><lastBuildDate>Fri, 20 Jun 2025 10:00:00 +0800</lastBuildDate><atom:link href="https://jonyfang.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>示例项目</title><link>https://jonyfang.github.io/projects/example-project/</link><pubDate>Wed, 22 Jan 2025 20:00:00 +0800</pubDate><guid>https://jonyfang.github.io/projects/example-project/</guid><description>这是一个示例项目，展示如何添加你的项目</description></item><item><title>新博客搭建流程及 Markdown 功能汇总</title><link>https://jonyfang.github.io/posts/2025-06-20-blog-setup-guide/</link><pubDate>Fri, 20 Jun 2025 10:00:00 +0800</pubDate><guid>https://jonyfang.github.io/posts/2025-06-20-blog-setup-guide/</guid><description>记录使用 Hugo + GitHub Pages + GitHub Actions 搭建技术博客的完整流程，以及 Markdown 功能汇总</description></item><item><title>关于我</title><link>https://jonyfang.github.io/about/</link><pubDate>Wed, 22 Jan 2025 20:05:00 +0800</pubDate><guid>https://jonyfang.github.io/about/</guid><description>&lt;p&gt;👋 Hi, 我是 &lt;strong&gt;JonyFang&lt;/strong&gt;&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Jony's Blog</title><link>https://jonyfang.github.io/</link><description>Recent content on Jony's Blog</description><generator>Hugo -- 0.152.2</generator><language>zh-CN</language><lastBuildDate>Sun, 23 Nov 2025 10:00:00 +0800</lastBuildDate><atom:link href="https://jonyfang.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>示例项目</title><link>https://jonyfang.github.io/projects/example-project/</link><pubDate>Wed, 22 Jan 2025 20:00:00 +0800</pubDate><guid>https://jonyfang.github.io/projects/example-project/</guid><description>这是一个示例项目，展示如何添加你的项目</description></item><item><title>Ollama 技术原理</title><link>https://jonyfang.github.io/posts/ollama-technical-principle/</link><pubDate>Sun, 23 Nov 2025 10:00:00 +0800</pubDate><guid>https://jonyfang.github.io/posts/ollama-technical-principle/</guid><description>&lt;h2 id="技术原理"&gt;技术原理&lt;/h2&gt;
+&lt;p&gt;依赖 &lt;code&gt;llama.cpp&lt;/code&gt;，把 LLM 跑在 macOS, Linux, and Windows，用 GO 实现。支持导入 gguf, PyTorch or Safetensors 模型。&lt;/p&gt;
+&lt;p&gt;核心看这个配置文件 &lt;code&gt;Modelfile&lt;/code&gt;，这个是 Ollama 里的唯一配置文件。所有模型权重、推理参数、提示词模板都写在这里，可以认为是 Ollama 里最重要的文件。&lt;/p&gt;
+&lt;p&gt;其中 &lt;code&gt;gguf&lt;/code&gt; 在 Ollama 内部直接使用 llama.cpp 推理了。&lt;code&gt;PyTorch&lt;/code&gt; 和 &lt;code&gt;Safetensors&lt;/code&gt; 模型需要步骤比较多，需要借助 llama.cpp 这个工具先转换一下。&lt;/p&gt;
+&lt;h3 id="具体转换步骤"&gt;具体转换步骤&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;转化模型&lt;/strong&gt;：&lt;code&gt;python llm/llama.cpp/convert.py ./model --outtype f16 --outfile converted.bin&lt;/code&gt;（半精度 f16）&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;量化模型&lt;/strong&gt;：&lt;code&gt;llm/llama.cpp/quantize converted.bin quantized.bin q4_0&lt;/code&gt;（int4 位）&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;编写 Modelfile&lt;/strong&gt;：&lt;code&gt;FROM quantized.bin&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;创建 Ollama model&lt;/strong&gt;：&lt;code&gt;ollama create example -f Modelfile&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="配置说明"&gt;配置说明&lt;/h2&gt;
+&lt;h3 id="modelfile-关键参数"&gt;Modelfile 关键参数&lt;/h3&gt;
+&lt;p&gt;在 &lt;code&gt;Modelfile&lt;/code&gt; 中可以配置以下关键参数：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;FROM&lt;/code&gt;：指定基础模型文件路径&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;PARAMETER temperature&lt;/code&gt;：控制生成文本的随机性&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;PARAMETER num_ctx&lt;/code&gt;：设置上下文窗口大小&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SYSTEM&lt;/code&gt;：设置系统提示词&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="示例配置"&gt;示例配置&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-modelfile" data-lang="modelfile"&gt;FROM quantized.bin
+PARAMETER temperature 0.7
+PARAMETER num_ctx 4096
+SYSTEM &amp;#34;You are a helpful AI assistant.&amp;#34;
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id="性能优化"&gt;性能优化&lt;/h2&gt;
+&lt;h3 id="量化方法对比"&gt;量化方法对比&lt;/h3&gt;
+&lt;p&gt;不同的量化方法对模型性能和精度有不同影响：&lt;/p&gt;</description></item><item><title>新博客搭建流程及 Markdown 功能汇总</title><link>https://jonyfang.github.io/posts/2025-06-20-blog-setup-guide/</link><pubDate>Fri, 20 Jun 2025 10:00:00 +0800</pubDate><guid>https://jonyfang.github.io/posts/2025-06-20-blog-setup-guide/</guid><description>记录使用 Hugo + GitHub Pages + GitHub Actions 搭建技术博客的完整流程，以及 Markdown 功能汇总</description></item><item><title>关于我</title><link>https://jonyfang.github.io/about/</link><pubDate>Wed, 22 Jan 2025 20:05:00 +0800</pubDate><guid>https://jonyfang.github.io/about/</guid><description>&lt;p&gt;👋 Hi, 我是 &lt;strong&gt;JonyFang&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;如果你想与我交流，可以通过以下方式：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;📧 &lt;strong&gt;Email&lt;/strong&gt;: &lt;a href="mailto:jony.chunfang@gmail.com"&gt;jony.chunfang@gmail.com&lt;/a&gt;&lt;/li&gt;
